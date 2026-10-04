@@ -126,17 +126,10 @@ private data class StoreRankingBar(
     val stockRetailValue: Double
 )
 
-private enum class TimeRangeFilter(val labelId: String, val labelEn: String, val days: Int?) {
-    ALL("Semua Waktu", "All Time", null),
-    DAYS_30("30 Hari", "30 Days", 30),
-    DAYS_7("7 Hari", "7 Days", 7),
-    TODAY("Hari Ini", "Today", 1)
-}
-
 private enum class StoreBarMetric(val labelId: String, val labelEn: String) {
+    SALES("Omset Transaksi", "Sales Revenue"),
     STOCK_VALUE("Nilai Stok (Rp)", "Stock Value"),
-    STOCK_PCS("Stok Aktif (Pcs)", "Stock Units"),
-    SALES("Omset Transaksi", "Sales Revenue")
+    STOCK_PCS("Stok Aktif (Pcs)", "Stock Units")
 }
 
 @Composable
@@ -164,7 +157,26 @@ fun GraphicsAnalysisScreen(
     )
     val bizRecords by viewModel.repository.businessRecords.collectAsStateWithLifecycle(initialValue = emptyList())
 
-    var selectedTimeRange by remember { mutableStateOf(TimeRangeFilter.ALL) }
+    val initialCal = remember { Calendar.getInstance() }
+    var selectedPeriodMode by remember { mutableStateOf(AnalyticsPeriodMode.ALL) }
+    var selectedYear by remember { mutableIntStateOf(initialCal.get(Calendar.YEAR)) }
+    var selectedMonth by remember { mutableIntStateOf(initialCal.get(Calendar.MONTH)) }
+    var selectedDay by remember { mutableIntStateOf(initialCal.get(Calendar.DAY_OF_MONTH)) }
+    var hasSyncedInitialDateWithHistory by remember { mutableStateOf(false) }
+    var showCalendarModal by remember { mutableStateOf(false) }
+
+    // Sync initial calendar month/day to the most recent transaction date so user immediately sees history dots
+    LaunchedEffect(transactions.size) {
+        if (!hasSyncedInitialDateWithHistory && transactions.isNotEmpty()) {
+            val latestTxMillis = transactions.maxOf { it.header.transaction_date }
+            val c = Calendar.getInstance().apply { timeInMillis = latestTxMillis }
+            selectedYear = c.get(Calendar.YEAR)
+            selectedMonth = c.get(Calendar.MONTH)
+            selectedDay = c.get(Calendar.DAY_OF_MONTH)
+            hasSyncedInitialDateWithHistory = true
+        }
+    }
+
     var selectedStoreMetric by remember { mutableStateOf(StoreBarMetric.STOCK_VALUE) }
 
     var animTrigger by remember { mutableStateOf(false) }
@@ -175,25 +187,42 @@ fun GraphicsAnalysisScreen(
         label = "ChartAnim"
     )
 
-    val cutoffMillis = remember(selectedTimeRange) {
-        val days = selectedTimeRange.days ?: return@remember 0L
-        val cal = Calendar.getInstance()
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        if (days > 1) {
-            cal.add(Calendar.DAY_OF_YEAR, -(days - 1))
-        }
-        cal.timeInMillis
+    val periodBounds = remember(selectedPeriodMode, selectedYear, selectedMonth, selectedDay) {
+        computePeriodBounds(
+            mode = selectedPeriodMode,
+            selectedYear = selectedYear,
+            selectedMonth = selectedMonth,
+            selectedDayOfMonth = selectedDay
+        )
     }
 
-    val filteredTransactions = remember(transactions, cutoffMillis) {
-        if (cutoffMillis <= 0L) transactions
-        else transactions.filter { it.header.transaction_date >= cutoffMillis }
+    val filteredTransactions = remember(transactions, periodBounds) {
+        val (startMs, endMs) = periodBounds
+        transactions.filter { tx ->
+            tx.header.transaction_date in startMs..endMs
+        }
+    }
+
+    val filteredBizRecords = remember(bizRecords, periodBounds) {
+        val (startMs, endMs) = periodBounds
+        bizRecords.filter { rec ->
+            rec.transaction_date in startMs..endMs
+        }
     }
 
     val productMap = remember(products) { products.associateBy { it.id } }
+
+    val dailyHistorySummaries = remember(filteredTransactions, filteredBizRecords, productMap) {
+        buildDailyHistoryList(
+            transactions = filteredTransactions,
+            bizRecords = filteredBizRecords,
+            productMap = productMap
+        )
+    }
+
+    val periodDescriptionLabel = remember(selectedPeriodMode, selectedYear, selectedMonth, selectedDay) {
+        formatPeriodLabel(selectedPeriodMode, selectedYear, selectedMonth, selectedDay)
+    }
 
     // Calculate filtered metrics
     val filteredSalesRevenue = remember(filteredTransactions) {
@@ -210,12 +239,33 @@ fun GraphicsAnalysisScreen(
             }
         }
     }
-    val filteredOpEx = remember(bizRecords, cutoffMillis) {
-        bizRecords
-            .filter { it.category == FinancialCategory.BUSINESS_EXPENSE && (cutoffMillis <= 0L || it.transaction_date >= cutoffMillis) }
+    val filteredOpEx = remember(filteredBizRecords) {
+        filteredBizRecords
+            .filter { it.category == FinancialCategory.BUSINESS_EXPENSE }
             .sumOf { it.amount }
     }
     val filteredNetProfit = (filteredSalesRevenue - filteredHpp) - filteredOpEx
+
+    val filteredBusinessSummary = remember(
+        selectedPeriodMode,
+        businessSummary,
+        filteredSalesRevenue,
+        filteredHpp,
+        filteredOpEx,
+        filteredNetProfit
+    ) {
+        if (selectedPeriodMode == AnalyticsPeriodMode.ALL) {
+            businessSummary
+        } else {
+            BusinessFinancialSummary(
+                filteredSalesRevenue,
+                filteredHpp,
+                filteredSalesRevenue - filteredHpp,
+                filteredOpEx,
+                filteredNetProfit
+            )
+        }
+    }
 
     val totalConsignedPieces = remember(stocks) { stocks.sumOf { it.current_quantity } }
     val totalConsignedRetailValue = remember(stocks, productMap) {
@@ -246,24 +296,30 @@ fun GraphicsAnalysisScreen(
     // Build Trend Line / Area Chart Points
     // Uses real transaction history if available; otherwise plots real Consigned Value & Potential Profit across Stores
     val hasTransactionHistory = filteredTransactions.isNotEmpty()
-    val trendPoints = remember(filteredTransactions, customers, stocks, productMap) {
+    val isSpecificDateOrMonth = selectedPeriodMode == AnalyticsPeriodMode.SPECIFIC_DATE ||
+        selectedPeriodMode == AnalyticsPeriodMode.SPECIFIC_MONTH ||
+        selectedPeriodMode == AnalyticsPeriodMode.TODAY
+
+    val trendPoints = remember(filteredTransactions, customers, stocks, productMap, isSpecificDateOrMonth) {
         if (filteredTransactions.isNotEmpty()) {
-            val fmt = SimpleDateFormat("dd/MM", Locale.getDefault())
+            val fmt = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault())
+            val shortFmt = SimpleDateFormat("dd/MM", Locale.getDefault())
             val sortedAsc = filteredTransactions.sortedBy { it.header.transaction_date }
-            sortedAsc.takeLast(8).map { tx ->
+            sortedAsc.takeLast(12).map { tx ->
                 val rev = tx.header.total_sold_amount
                 val cost = tx.details.sumOf { (d, p) ->
                     d.sold_quantity * ((p ?: productMap[d.product_id])?.cost_price ?: 0.0)
                 }
                 val profit = rev - cost
                 ChartPoint(
-                    label = tx.customer?.name?.take(8) ?: fmt.format(Date(tx.header.transaction_date)),
+                    label = tx.customer?.name?.replace("Warung ", "")?.take(7)
+                        ?: shortFmt.format(Date(tx.header.transaction_date)),
                     primaryValue = rev,
                     secondaryValue = profit.coerceAtLeast(0.0),
                     subtitle = "${tx.customer?.name ?: "Transaksi"} (${fmt.format(Date(tx.header.transaction_date))})"
                 )
             }
-        } else {
+        } else if (!isSpecificDateOrMonth) {
             val stocksByCust = stocks.groupBy { it.customer_id }
             customers.map { c ->
                 val cStocks = stocksByCust[c.id].orEmpty()
@@ -282,11 +338,13 @@ fun GraphicsAnalysisScreen(
                     subtitle = "${c.name} • Rute ${c.route_day}"
                 )
             }
+        } else {
+            emptyList()
         }
     }
 
-    // Build Donut Chart Data (Product Distribution by Consigned Value + Sold Value)
-    val donutSlices = remember(products, stocks, filteredTransactions) {
+    // Build Donut Chart Data (Product Distribution by Sold Value in Period or Consigned Value)
+    val donutSlices = remember(products, stocks, filteredTransactions, isSpecificDateOrMonth) {
         val stockByProd = stocks.groupBy { it.product_id }
             .mapValues { entry -> entry.value.sumOf { it.current_quantity } }
         val soldByProd = filteredTransactions.flatMap { it.details }
@@ -296,15 +354,15 @@ fun GraphicsAnalysisScreen(
         products.mapIndexed { idx, p ->
             val activePcs = stockByProd[p.id] ?: 0
             val soldPcs = soldByProd[p.id] ?: 0
-            val totalPcs = activePcs + soldPcs
-            val valueRp = (totalPcs.coerceAtLeast(1)) * p.selling_price
+            val relevantPcs = if (filteredTransactions.isNotEmpty()) soldPcs else if (isSpecificDateOrMonth) 0 else activePcs
+            val valueRp = (relevantPcs.coerceAtLeast(if (isSpecificDateOrMonth && filteredTransactions.isEmpty()) 0 else 1)) * p.selling_price
             val marginPct = if (p.selling_price_pack > 0) {
                 ((p.selling_price_pack - p.cost_price_pack) / p.selling_price_pack) * 100.0
             } else 0.0
             DonutSliceData(
                 name = p.name,
                 value = valueRp,
-                piecesCount = activePcs,
+                piecesCount = if (filteredTransactions.isNotEmpty()) soldPcs else activePcs,
                 marginPct = marginPct,
                 color = chartPalette[idx % chartPalette.size]
             )
@@ -335,6 +393,37 @@ fun GraphicsAnalysisScreen(
             StoreBarMetric.STOCK_PCS -> list.sortedByDescending { it.activeStockPieces }
             StoreBarMetric.STOCK_VALUE -> list.sortedByDescending { it.stockRetailValue }
         }
+    }
+
+    if (showCalendarModal) {
+        CalendarDateMonthPickerModal(
+            initialYear = selectedYear,
+            initialMonth = selectedMonth,
+            initialDay = selectedDay,
+            allTransactions = transactions,
+            onSelectFullMonth = { y, m ->
+                selectedYear = y
+                selectedMonth = m
+                selectedPeriodMode = AnalyticsPeriodMode.SPECIFIC_MONTH
+                if (transactions.any {
+                        val c = Calendar.getInstance().apply { timeInMillis = it.header.transaction_date }
+                        c.get(Calendar.YEAR) == y && c.get(Calendar.MONTH) == m
+                    }
+                ) {
+                    selectedStoreMetric = StoreBarMetric.SALES
+                }
+                showCalendarModal = false
+            },
+            onSelectSpecificDate = { y, m, d ->
+                selectedYear = y
+                selectedMonth = m
+                selectedDay = d
+                selectedPeriodMode = AnalyticsPeriodMode.SPECIFIC_DATE
+                selectedStoreMetric = StoreBarMetric.SALES
+                showCalendarModal = false
+            },
+            onDismiss = { showCalendarModal = false }
+        )
     }
 
     Scaffold(
@@ -378,7 +467,7 @@ fun GraphicsAnalysisScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = if (isEn) "Graphics & Chart Studio" else "Analisis Grafik & Chart",
+                                text = if (isEn) "Graphics & Chart Studio" else "Analisis Grafik & Riwayat",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimaryDark,
@@ -393,7 +482,7 @@ fun GraphicsAnalysisScreen(
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = "LIVE",
+                                    text = "HISTORY",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = SupabaseGreen
@@ -401,9 +490,9 @@ fun GraphicsAnalysisScreen(
                             }
                         }
                         Text(
-                            text = if (isEn) "Interactive Visual Telemetry & Business Metrics" else "Visualisasi Data Distribusi, Stok & Profit Real-Time",
+                            text = periodDescriptionLabel,
                             fontSize = 11.sp,
-                            color = TextSecondaryDark,
+                            color = SupabaseGreen,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -461,48 +550,42 @@ fun GraphicsAnalysisScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 1. Time Period Selector Pills
+                // 1. Interactive Date, Month & Period Filter Control Card
                 item {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        itemsIndexed(TimeRangeFilter.entries) { _, filter ->
-                            val selected = selectedTimeRange == filter
-                            Surface(
-                                modifier = Modifier
-                                    .clickable { selectedTimeRange = filter }
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (selected) SupabaseGreen else CharcoalBorder,
-                                        shape = RoundedCornerShape(20.dp)
-                                    ),
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (selected) SupabaseGreen.copy(alpha = 0.16f) else CharcoalSurface
-                            ) {
-                                Text(
-                                    text = if (isEn) filter.labelEn else filter.labelId,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selected) SupabaseGreen else TextSecondaryDark,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                                )
+                    DateAndMonthFilterControlCard(
+                        isEn = isEn,
+                        selectedMode = selectedPeriodMode,
+                        selectedYear = selectedYear,
+                        selectedMonth = selectedMonth,
+                        selectedDay = selectedDay,
+                        allTransactions = transactions,
+                        onSelectMode = { mode ->
+                            selectedPeriodMode = mode
+                            if (mode == AnalyticsPeriodMode.SPECIFIC_DATE || mode == AnalyticsPeriodMode.SPECIFIC_MONTH) {
+                                selectedStoreMetric = StoreBarMetric.SALES
                             }
-                        }
-                    }
+                        },
+                        onUpdateDate = { y, m, d ->
+                            selectedYear = y
+                            selectedMonth = m
+                            selectedDay = d
+                        },
+                        onOpenCalendarModal = { showCalendarModal = true }
+                    )
                 }
 
                 // 2. Executive KPI Summary Grid (2x2)
                 item {
-                    val primaryDisplayVal = if (filteredSalesRevenue > 0) filteredSalesRevenue else totalConsignedRetailValue
-                    val primaryLabel = if (filteredSalesRevenue > 0) {
+                    val useTxMetrics = isSpecificDateOrMonth || filteredSalesRevenue > 0
+                    val primaryDisplayVal = if (useTxMetrics) filteredSalesRevenue else totalConsignedRetailValue
+                    val primaryLabel = if (useTxMetrics) {
                         if (isEn) "Sales Revenue" else "Omset Penjualan"
                     } else {
                         if (isEn) "Active Stock Value" else "Nilai Stok Aktif"
                     }
 
-                    val profitDisplayVal = if (filteredSalesRevenue > 0) filteredNetProfit else potentialGrossProfit
-                    val profitLabel = if (filteredSalesRevenue > 0) {
+                    val profitDisplayVal = if (useTxMetrics) filteredNetProfit else potentialGrossProfit
+                    val profitLabel = if (useTxMetrics) {
                         if (isEn) "Net Profit" else "Laba Bersih"
                     } else {
                         if (isEn) "Potential Profit" else "Potensi Laba Stok"
@@ -511,7 +594,7 @@ fun GraphicsAnalysisScreen(
                     val marginPct = if (primaryDisplayVal > 0) (profitDisplayVal / primaryDisplayVal) * 100.0 else 0.0
                     val collectionRate = if (filteredSalesRevenue > 0) {
                         ((filteredPaidAmount / filteredSalesRevenue) * 100.0).coerceIn(0.0, 100.0)
-                    } else 100.0
+                    } else if (isSpecificDateOrMonth) 0.0 else 100.0
 
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
@@ -521,7 +604,7 @@ fun GraphicsAnalysisScreen(
                             KpiMetricCard(
                                 title = primaryLabel,
                                 value = formatRupiahCompact(primaryDisplayVal),
-                                subValue = if (filteredSalesRevenue > 0) "${filteredTransactions.size} Transaksi" else "${customers.size} Warung Mitra",
+                                subValue = if (useTxMetrics) "${filteredTransactions.size} Nota Transaksi" else "${customers.size} Warung Mitra",
                                 accentColor = SupabaseGreen,
                                 progress = 0.82f * animProgress,
                                 icon = Icons.AutoMirrored.Filled.TrendingUp,
@@ -551,11 +634,11 @@ fun GraphicsAnalysisScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             KpiMetricCard(
-                                title = if (isEn) "Collection Rate" else "Rasio Setoran Kas",
-                                value = "%.0f%%".format(collectionRate),
-                                subValue = "${customers.size} Warung • ${products.size} Produk",
+                                title = if (isEn) "Collection Rate" else "Setoran Kas Masuk",
+                                value = if (useTxMetrics) formatRupiahCompact(filteredPaidAmount) else "%.0f%%".format(collectionRate),
+                                subValue = if (useTxMetrics) "Rasio Bayar %.0f%%".format(collectionRate) else "${customers.size} Warung • ${products.size} Produk",
                                 accentColor = Color(0xFFA855F7),
-                                progress = (collectionRate.toFloat() / 100f).coerceIn(0.2f, 1f) * animProgress,
+                                progress = (collectionRate.toFloat() / 100f).coerceIn(0.15f, 1f) * animProgress,
                                 icon = Icons.Default.AccountBalanceWallet,
                                 modifier = Modifier.weight(1f)
                             )
@@ -563,37 +646,61 @@ fun GraphicsAnalysisScreen(
                     }
                 }
 
-                // 3. Interactive Cubic Bezier Area & Dual-Line Chart
+                // 3. Interactive Daily Performance Bar Chart (by Date in Selected Month)
+                item {
+                    DailyPerformanceBarChartCard(
+                        isEn = isEn,
+                        selectedYear = selectedYear,
+                        selectedMonth = selectedMonth,
+                        selectedDay = selectedDay,
+                        selectedMode = selectedPeriodMode,
+                        allTransactions = transactions,
+                        allBizRecords = bizRecords,
+                        productMap = productMap,
+                        animProgress = animProgress,
+                        onSelectSpecificDate = { y, m, d ->
+                            selectedYear = y
+                            selectedMonth = m
+                            selectedDay = d
+                            selectedPeriodMode = AnalyticsPeriodMode.SPECIFIC_DATE
+                            selectedStoreMetric = StoreBarMetric.SALES
+                        }
+                    )
+                }
+
+                // 4. Interactive Cubic Bezier Area & Dual-Line Chart
                 item {
                     BezierTrendChartCard(
-                        title = if (hasTransactionHistory) {
-                            if (isEn) "Revenue vs Profit Trend" else "Grafik Tren Omset vs Laba Bersih"
+                        title = if (hasTransactionHistory || isSpecificDateOrMonth) {
+                            if (isEn) "Revenue vs Profit Trend" else "Grafik Tren Omset vs Laba (${selectedPeriodMode.labelId})"
                         } else {
                             if (isEn) "Consigned Value & Profit by Store" else "Grafik Nilai Titipan & Potensi Laba Warung"
                         },
                         subtitle = if (hasTransactionHistory) {
-                            if (isEn) "Tap any node on the curve to inspect transaction details" else "Sentuh titik pada kurva untuk melihat detail nominal"
+                            if (isEn) "Tap any node on the curve to inspect transaction details" else "Sentuh titik pada kurva untuk melihat detail transaksi pada periode terpilih"
+                        } else if (isSpecificDateOrMonth) {
+                            "Belum ada nota kunjungan pada tanggal/bulan ini. Pilih tanggal bertitik hijau di atas."
                         } else {
                             if (isEn) "Tap any store node to inspect consigned value & profit" else "Sentuh titik warung pada grafik untuk inspeksi nilai & margin"
                         },
-                        primaryLegend = if (hasTransactionHistory) "Omset" else "Nilai Jual",
-                        secondaryLegend = if (hasTransactionHistory) "Laba" else "Potensi Laba",
+                        primaryLegend = if (hasTransactionHistory || isSpecificDateOrMonth) "Omset" else "Nilai Jual",
+                        secondaryLegend = if (hasTransactionHistory || isSpecificDateOrMonth) "Laba" else "Potensi Laba",
                         points = trendPoints,
                         animProgress = animProgress
                     )
                 }
 
-                // 4. Interactive Product Distribution Donut Chart
+                // 5. Interactive Product Distribution Donut Chart
                 item {
                     ProductDonutChartCard(
                         title = if (isEn) "Product Share & Margin Distribution" else "Distribusi Produk & Margin Keuntungan",
-                        subtitle = if (isEn) "Tap a product below to highlight its ring segment" else "Ketuk nama produk untuk menyorot porsi stok & margin",
+                        subtitle = if (isEn) "Tap a product below to highlight its ring segment" else "Ketuk nama produk untuk menyorot porsi penjualan/stok & margin",
                         slices = donutSlices,
                         animProgress = animProgress
                     )
                 }
 
-                // 5. Horizontal Gradient Bar Chart — Store Performance Ranking
+                // 6. Horizontal Gradient Bar Chart — Store Performance Ranking
                 item {
                     StoreRankingBarChartCard(
                         isEn = isEn,
@@ -604,7 +711,7 @@ fun GraphicsAnalysisScreen(
                     )
                 }
 
-                // 6. Weekly Route Load & Consignment Column Chart (Senin - Minggu)
+                // 7. Weekly Route Load & Consignment Column Chart (Senin - Minggu)
                 item {
                     WeeklyRouteColumnChartCard(
                         isEn = isEn,
@@ -614,15 +721,32 @@ fun GraphicsAnalysisScreen(
                     )
                 }
 
-                // 7. Financial Cashflow Structure & Profit Waterfall
+                // 8. Financial Cashflow Structure & Profit Waterfall
                 item {
                     CashflowComparisonChartCard(
                         isEn = isEn,
-                        businessSummary = businessSummary,
+                        businessSummary = filteredBusinessSummary,
                         personalSummary = personalSummary,
                         potentialRetailValue = totalConsignedRetailValue,
                         potentialCostValue = totalConsignedCostValue,
                         animProgress = animProgress
+                    )
+                }
+
+                // 9. Historical Performance & Daily Visit Log by Date
+                item {
+                    HistoricalPerformanceLogCard(
+                        isEn = isEn,
+                        periodLabel = periodDescriptionLabel,
+                        dailySummaries = dailyHistorySummaries,
+                        productMap = productMap,
+                        onFocusSpecificDate = { y, m, d ->
+                            selectedYear = y
+                            selectedMonth = m
+                            selectedDay = d
+                            selectedPeriodMode = AnalyticsPeriodMode.SPECIFIC_DATE
+                            selectedStoreMetric = StoreBarMetric.SALES
+                        }
                     )
                 }
 
