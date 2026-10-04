@@ -1,0 +1,8 @@
+{
+  "name": "ConsignTrack",
+  "description": "Aplikasi Manajemen Distribusi & Konsinyasi Lapangan berbasis offline-first dengan rekonsiliasi stok, thermal printing, dan pembukuan kas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,164 @@
+name: Android CI/CD Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run unit tests before packaging'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Debug & Release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Required for AGP 9.1.1 & Gradle 9.3.1)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Set up Gradle & Cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+
+      - name: Prepare .env File for Secrets Gradle Plugin
+        env:
+          GEMINI_API_KEY_SECRET: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ ! -f ".env" ]; then
+            if [ -f ".env.example" ]; then
+              cp .env.example .env
+            else
+              echo "GEMINI_API_KEY=" > .env
+            fi
+          fi
+          if [ -n "${GEMINI_API_KEY_SECRET}" ]; then
+            grep -v '^GEMINI_API_KEY=' .env > .env.tmp || true
+            echo "GEMINI_API_KEY=${GEMINI_API_KEY_SECRET}" >> .env.tmp
+            mv .env.tmp .env
+          fi
+
+      - name: Restore debug.keystore & Configure Release Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          SECRET_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          SECRET_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 1. Ensure debug.keystore exists (gitignored, restored from debug.keystore.base64)
+          if [ -f "debug.keystore.base64" ]; then
+            base64 --decode debug.keystore.base64 > debug.keystore
+          fi
+          if [ ! -s "debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          # 2. Ensure release keystore (my-upload-key.jks) exists so release builds never fail
+          if [ -n "${KEYSTORE_BASE64}" ]; then
+            echo "${KEYSTORE_BASE64}" | base64 --decode > "${GITHUB_WORKSPACE}/my-upload-key.jks"
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=${SECRET_STORE_PASSWORD}" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=${SECRET_KEY_PASSWORD}" >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -v \
+              -keystore "${GITHUB_WORKSPACE}/my-upload-key.jks" \
+              -storepass android \
+              -alias upload \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=ConsignTrack Release,O=ConsignTrack,C=ID"
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=android" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=android" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Debug APK
+        run: |
+          gradle :app:assembleDebug \
+            -Pandroid.builder.sdkDownload=true \
+            --no-configuration-cache \
+            --stacktrace
+
+      - name: Run Unit Tests
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_tests == true }}
+        run: |
+          gradle :app:testDebugUnitTest \
+            --no-configuration-cache \
+            --stacktrace
+
+      - name: Build Signed Release APK & App Bundle (AAB)
+        run: |
+          gradle :app:assembleRelease :app:bundleRelease \
+            -Pandroid.builder.sdkDownload=true \
+            --no-configuration-cache \
+            --stacktrace
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ConsignTrack-Debug-APK
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Release APK & AAB Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ConsignTrack-Release-Packages
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create GitHub Release on Version Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
