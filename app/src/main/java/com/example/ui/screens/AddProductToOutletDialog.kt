@@ -87,10 +87,10 @@ fun AddProductToOutletDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.95f)
+                .fillMaxWidth(0.97f)
                 .systemBarsPadding()
                 .imePadding()
-                .heightIn(max = 620.dp)
+                .heightIn(max = 680.dp)
                 .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
             color = CharcoalSurface

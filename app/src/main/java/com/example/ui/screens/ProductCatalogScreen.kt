@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.entity.Product
 import com.example.ui.theme.AmberWarning
@@ -266,6 +267,11 @@ private fun ProductMultiUnitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth(0.96f)
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         containerColor = CharcoalSurface,
         title = {
             Text(
@@ -277,7 +283,9 @@ private fun ProductMultiUnitDialog(
         },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedTextField(

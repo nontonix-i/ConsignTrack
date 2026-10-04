@@ -98,15 +98,15 @@ fun ReceiptPreviewDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .heightIn(max = 700.dp)
+                .fillMaxWidth(0.97f)
+                .heightIn(max = 720.dp)
                 .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
             color = CharcoalSurface
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
                 // Header Row

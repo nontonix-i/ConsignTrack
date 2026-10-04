@@ -1,7 +1,10 @@
 package com.example.ui.screens
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,6 +40,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditLocation
@@ -98,6 +104,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.data.local.entity.Customer
@@ -118,6 +125,7 @@ import com.example.ui.viewmodel.DashboardViewModel
 import com.example.ui.viewmodel.RouteFilter
 import com.example.util.LocationHelper
 import com.example.util.PhotoChooserBottomSheet
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -240,31 +248,51 @@ fun DashboardScreen(
                 }
             }
 
-            // Real-Time GPS Tracking Status Bar: Clean & Compact
+            // Real-Time GPS Tracking Status Bar: Clean, Multi-Source & Online/Offline Aware
             if (LocationHelper.hasLocationPermission(context)) {
+                val loc = uiState.userLocation
+                val accText = uiState.gpsAccuracyMeters?.let { "±${it.toInt().coerceAtLeast(1)}m" } ?: ""
+                val coordsText = loc?.let { "%.5f, %.5f".format(Locale.US, it.latitude, it.longitude) } ?: ""
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 2.dp)
                         .background(SupabaseGreen.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
                         .border(1.dp, SupabaseGreen.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
-                                .background(if (uiState.userLocation != null) SupabaseGreen else AmberWarning, CircleShape)
+                                .background(if (loc != null) SupabaseGreen else AmberWarning, CircleShape)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (uiState.userLocation != null) "GPS Aktif" else "Mencari GPS...",
-                            fontSize = 11.sp,
+                            text = if (loc != null) {
+                                "${uiState.gpsProviderLabel} $accText • $coordsText"
+                            } else {
+                                "Mencari titik GPS (${if (uiState.isOnline) "Online Fused" else "Satelit Offline"})..."
+                            },
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (uiState.userLocation != null) SupabaseGreen else AmberWarning
+                            color = if (loc != null) SupabaseGreen else AmberWarning,
+                            maxLines = 1
                         )
+                        if (uiState.pendingOfflineAddressCount > 0 && !uiState.isOnline) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "• ${uiState.pendingOfflineAddressCount} antre alamat",
+                                fontSize = 10.sp,
+                                color = AmberWarning,
+                                maxLines = 1
+                            )
+                        }
                     }
 
                     Row(
@@ -279,7 +307,7 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(3.dp))
                         }
                         Text(
-                            text = "Update",
+                            text = if (uiState.isOnline) "Akurat" else "Offline",
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = SupabaseGreen
@@ -694,8 +722,13 @@ fun DashboardScreen(
             customer = editGpsTargetCustomer!!,
             currentDeviceLocation = uiState.userLocation,
             onDismiss = { editGpsTargetCustomer = null },
-            onSave = { lat, lng ->
-                viewModel.updateCustomerLocation(editGpsTargetCustomer!!.id, lat, lng)
+            onSave = { lat, lng, resolvedAddress ->
+                viewModel.updateCustomerLocation(
+                    customerId = editGpsTargetCustomer!!.id,
+                    latitude = lat,
+                    longitude = lng,
+                    resolvedAddress = resolvedAddress
+                )
                 editGpsTargetCustomer = null
             }
         )
@@ -707,6 +740,7 @@ fun DashboardScreen(
         PhotoChooserBottomSheet(
             title = "Foto Toko: ${targetCust?.name ?: ""}",
             hasExistingPhoto = !targetCust?.photo_uri.isNullOrBlank(),
+            existingPhotoUri = targetCust?.photo_uri,
             onPhotoSelected = { uri ->
                 viewModel.updateCustomerPhoto(photoTargetCustomerId!!, uri)
                 photoTargetCustomerId = null
@@ -903,6 +937,13 @@ private fun CustomerRouteCard(
                                     text = " • ${item.customer.address}",
                                     fontSize = 11.sp,
                                     color = TextSecondaryDark,
+                                    maxLines = 1
+                                )
+                            } else if (hasGps) {
+                                Text(
+                                    text = " • Auto-Alamat (GPS)",
+                                    fontSize = 10.5.sp,
+                                    color = TextMutedDark,
                                     maxLines = 1
                                 )
                             }
@@ -1143,28 +1184,15 @@ private fun AddCustomerWithRouteDialog(
     var longitudeStr by remember {
         mutableStateOf(currentDeviceLocation?.longitude?.let { "%.6f".format(Locale.US, it) } ?: "")
     }
-    var isDetectingGps by remember { mutableStateOf(false) }
-
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { perms ->
-        val granted = perms[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                perms[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) {
-            isDetectingGps = true
-            scope.launch {
-                val loc = LocationHelper.getFreshLocation(context, timeoutMs = 6000L)
-                if (loc != null) {
-                    latitudeStr = "%.6f".format(Locale.US, loc.latitude)
-                    longitudeStr = "%.6f".format(Locale.US, loc.longitude)
-                }
-                isDetectingGps = false
-            }
-        }
-    }
+    var lastAutoAddress by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth(0.96f)
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         containerColor = CharcoalSurface,
         title = {
             Text(
@@ -1176,7 +1204,9 @@ private fun AddCustomerWithRouteDialog(
         },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Row 1: Thumbnail Foto + Nama Warung
@@ -1281,7 +1311,7 @@ private fun AddCustomerWithRouteDialog(
                     )
                 }
 
-                // Row 3: No. WA & Alamat
+                // Row 3: No. WA & Alamat (Auto-filled from GPS when online/cached)
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
@@ -1300,7 +1330,7 @@ private fun AddCustomerWithRouteDialog(
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },
-                    label = { Text("Alamat Singkat") },
+                    label = { Text("Alamat (Otomatis dari GPS / Ketik Manual)") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SupabaseGreen,
@@ -1311,100 +1341,23 @@ private fun AddCustomerWithRouteDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Row 4: Minimalist GPS Bar
-                val hasCoords = latitudeStr.toDoubleOrNull() != null && longitudeStr.toDoubleOrNull() != null
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
-                        .border(1.dp, CharcoalBorder, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showManualGps = !showManualGps },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = if (hasCoords) SupabaseGreen else TextMutedDark,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (hasCoords) "GPS: $latitudeStr, $longitudeStr" else "Lokasi GPS (Opsional)",
-                            fontSize = 11.sp,
-                            color = if (hasCoords) SupabaseGreen else TextSecondaryDark,
-                            maxLines = 1
-                        )
-                    }
-
-                    TextButton(
-                        onClick = {
-                            if (LocationHelper.hasLocationPermission(context)) {
-                                isDetectingGps = true
-                                scope.launch {
-                                    val loc = LocationHelper.getFreshLocation(context, timeoutMs = 6000L)
-                                    if (loc != null) {
-                                        latitudeStr = "%.6f".format(Locale.US, loc.latitude)
-                                        longitudeStr = "%.6f".format(Locale.US, loc.longitude)
-                                    }
-                                    isDetectingGps = false
-                                }
-                            } else {
-                                locationPermissionLauncher.launch(
-                                    arrayOf(
-                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
-                                        android.Manifest.permission.ACCESS_COARSE_LOCATION
-                                    )
-                                )
-                            }
-                        },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        modifier = Modifier.height(28.dp)
-                    ) {
-                        if (isDetectingGps) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = SupabaseGreen)
-                        } else {
-                            Text("Ambil GPS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SupabaseGreen)
+                // Row 4: Smart Multi-Source GPS + Real-Time + Auto Address Section
+                GpsSmartCoordinateSection(
+                    latitudeStr = latitudeStr,
+                    longitudeStr = longitudeStr,
+                    currentAddress = address,
+                    autoLockInitialIfEmpty = true,
+                    onCoordinatesChanged = { newLat, newLng ->
+                        latitudeStr = newLat
+                        longitudeStr = newLng
+                    },
+                    onAutoAddressResolved = { resolvedAddr, forceApply ->
+                        if (forceApply || address.isBlank() || address == lastAutoAddress) {
+                            address = resolvedAddr
+                            lastAutoAddress = resolvedAddr
                         }
                     }
-                }
-
-                if (showManualGps) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = latitudeStr,
-                            onValueChange = { latitudeStr = it },
-                            label = { Text("Latitude") },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = SupabaseGreen,
-                                unfocusedBorderColor = CharcoalBorder,
-                                focusedTextColor = TextPrimaryDark,
-                                unfocusedTextColor = TextPrimaryDark
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = longitudeStr,
-                            onValueChange = { longitudeStr = it },
-                            label = { Text("Longitude") },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = SupabaseGreen,
-                                unfocusedBorderColor = CharcoalBorder,
-                                focusedTextColor = TextPrimaryDark,
-                                unfocusedTextColor = TextPrimaryDark
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
+                )
             }
         },
         confirmButton = {
@@ -1435,6 +1388,7 @@ private fun AddCustomerWithRouteDialog(
         PhotoChooserBottomSheet(
             title = "Foto Warung",
             hasExistingPhoto = photoUri != null,
+            existingPhotoUri = photoUri,
             onPhotoSelected = { uri ->
                 photoUri = uri
                 showPhotoChooser = false
@@ -1449,125 +1403,103 @@ private fun AddCustomerWithRouteDialog(
 }
 
 /**
- * Dialog Cepat Update Koordinat GPS Warung — Minimalist
+ * Dialog Cepat Update Koordinat GPS Warung & Konversi Alamat Otomatis — Minimalist
  */
 @Composable
 private fun EditCustomerGpsDialog(
     customer: Customer,
     currentDeviceLocation: android.location.Location?,
     onDismiss: () -> Unit,
-    onSave: (lat: Double?, lng: Double?) -> Unit
+    onSave: (lat: Double?, lng: Double?, resolvedAddress: String?) -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
     var latitudeStr by remember {
-        mutableStateOf(customer.latitude?.let { "%.6f".format(Locale.US, it) } ?: "")
+        mutableStateOf(
+            customer.latitude?.let { "%.6f".format(Locale.US, it) }
+                ?: currentDeviceLocation?.latitude?.let { "%.6f".format(Locale.US, it) }
+                ?: ""
+        )
     }
     var longitudeStr by remember {
-        mutableStateOf(customer.longitude?.let { "%.6f".format(Locale.US, it) } ?: "")
+        mutableStateOf(
+            customer.longitude?.let { "%.6f".format(Locale.US, it) }
+                ?: currentDeviceLocation?.longitude?.let { "%.6f".format(Locale.US, it) }
+                ?: ""
+        )
     }
-    var isDetectingGps by remember { mutableStateOf(false) }
-
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { perms ->
-        val granted = perms[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                perms[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) {
-            isDetectingGps = true
-            scope.launch {
-                val loc = LocationHelper.getFreshLocation(context, timeoutMs = 6000L)
-                if (loc != null) {
-                    latitudeStr = "%.6f".format(Locale.US, loc.latitude)
-                    longitudeStr = "%.6f".format(Locale.US, loc.longitude)
-                }
-                isDetectingGps = false
-            }
-        }
-    }
+    var addressPreview by remember { mutableStateOf(customer.address) }
+    var lastAutoAddress by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth(0.96f)
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         containerColor = CharcoalSurface,
         title = {
-            Text("Lokasi GPS • ${customer.name}", fontSize = 15.5.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Lokasi GPS • ${customer.name}",
+                    fontSize = 15.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark
+                )
+                Text(
+                    "Multi-GPS (Fused GMaps + Satelit Offline) & Auto Alamat",
+                    fontSize = 11.sp,
+                    color = SupabaseGreen
+                )
+            }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = {
-                        if (LocationHelper.hasLocationPermission(context)) {
-                            isDetectingGps = true
-                            scope.launch {
-                                val loc = LocationHelper.getFreshLocation(context, timeoutMs = 6000L)
-                                if (loc != null) {
-                                    latitudeStr = "%.6f".format(Locale.US, loc.latitude)
-                                    longitudeStr = "%.6f".format(Locale.US, loc.longitude)
-                                }
-                                isDetectingGps = false
-                            }
-                        } else {
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    android.Manifest.permission.ACCESS_FINE_LOCATION,
-                                    android.Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
-                            )
-                        }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GpsSmartCoordinateSection(
+                    latitudeStr = latitudeStr,
+                    longitudeStr = longitudeStr,
+                    currentAddress = addressPreview,
+                    autoLockInitialIfEmpty = customer.latitude == null || customer.longitude == null,
+                    alwaysExpandInputs = true,
+                    onCoordinatesChanged = { newLat, newLng ->
+                        latitudeStr = newLat
+                        longitudeStr = newLng
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    if (isDetectingGps) {
-                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFF042114))
-                        Spacer(modifier = Modifier.width(6.dp))
-                    } else {
-                        Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
+                    onAutoAddressResolved = { resolvedAddr, forceApply ->
+                        if (forceApply || addressPreview.isBlank() || addressPreview == lastAutoAddress) {
+                            addressPreview = resolvedAddr
+                            lastAutoAddress = resolvedAddr
+                        }
                     }
-                    Text("Ambil Titik Saat Ini", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                }
+                )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = latitudeStr,
-                        onValueChange = { latitudeStr = it },
-                        label = { Text("Latitude") },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SupabaseGreen,
-                            unfocusedBorderColor = CharcoalBorder,
-                            focusedTextColor = TextPrimaryDark,
-                            unfocusedTextColor = TextPrimaryDark
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    OutlinedTextField(
-                        value = longitudeStr,
-                        onValueChange = { longitudeStr = it },
-                        label = { Text("Longitude") },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SupabaseGreen,
-                            unfocusedBorderColor = CharcoalBorder,
-                            focusedTextColor = TextPrimaryDark,
-                            unfocusedTextColor = TextPrimaryDark
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                OutlinedTextField(
+                    value = addressPreview,
+                    onValueChange = { addressPreview = it },
+                    label = { Text("Alamat Warung (Otomatis dari Koordinat)") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SupabaseGreen,
+                        unfocusedBorderColor = CharcoalBorder,
+                        focusedTextColor = TextPrimaryDark,
+                        unfocusedTextColor = TextPrimaryDark
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(latitudeStr.toDoubleOrNull(), longitudeStr.toDoubleOrNull())
+                    onSave(
+                        latitudeStr.toDoubleOrNull(),
+                        longitudeStr.toDoubleOrNull(),
+                        addressPreview.trim().ifBlank { null }
+                    )
                 },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114))
@@ -1623,7 +1555,7 @@ private fun EditCustomerAndPricesDialog(
     var longitudeStr by remember(cust.id) {
         mutableStateOf(cust.longitude?.let { "%.6f".format(Locale.US, it) } ?: "")
     }
-    var isDetectingGps by remember { mutableStateOf(false) }
+    var lastAutoAddress by remember(cust.id) { mutableStateOf("") }
 
     // Tab 1: Harga Khusus & Titip Lalu State
     val stockQuantityMap = remember(cust.id, item.stockItems, allProducts) {
@@ -1645,29 +1577,17 @@ private fun EditCustomerAndPricesDialog(
         }
     }
 
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { perms ->
-        val granted = perms[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                perms[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) {
-            isDetectingGps = true
-            scope.launch {
-                val loc = LocationHelper.getFreshLocation(context, timeoutMs = 6000L)
-                if (loc != null) {
-                    latitudeStr = "%.6f".format(Locale.US, loc.latitude)
-                    longitudeStr = "%.6f".format(Locale.US, loc.longitude)
-                }
-                isDetectingGps = false
-            }
-        }
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth(0.96f)
+            .heightIn(max = 680.dp)
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         containerColor = CharcoalSurface,
         title = {
-            Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1729,7 +1649,9 @@ private fun EditCustomerAndPricesDialog(
         text = {
             if (activeTab == 0) {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Row 1: Foto Thumbnail + Nama Warung
@@ -1853,7 +1775,7 @@ private fun EditCustomerAndPricesDialog(
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
-                        label = { Text("Alamat") },
+                        label = { Text("Alamat (Otomatis dari GPS / Ketik Manual)") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
@@ -1864,100 +1786,23 @@ private fun EditCustomerAndPricesDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // Row 4: Compact GPS Bar
-                    val hasCoords = latitudeStr.toDoubleOrNull() != null && longitudeStr.toDoubleOrNull() != null
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
-                            .border(1.dp, CharcoalBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { showManualGps = !showManualGps },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = if (hasCoords) SupabaseGreen else TextMutedDark,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (hasCoords) "GPS: $latitudeStr, $longitudeStr" else "Belum ada titik GPS",
-                                fontSize = 11.sp,
-                                color = if (hasCoords) SupabaseGreen else TextSecondaryDark,
-                                maxLines = 1
-                            )
-                        }
-
-                        TextButton(
-                            onClick = {
-                                if (LocationHelper.hasLocationPermission(context)) {
-                                    isDetectingGps = true
-                                    scope.launch {
-                                        val loc = LocationHelper.getFreshLocation(context, timeoutMs = 6000L)
-                                        if (loc != null) {
-                                            latitudeStr = "%.6f".format(Locale.US, loc.latitude)
-                                            longitudeStr = "%.6f".format(Locale.US, loc.longitude)
-                                        }
-                                        isDetectingGps = false
-                                    }
-                                } else {
-                                    locationPermissionLauncher.launch(
-                                        arrayOf(
-                                            android.Manifest.permission.ACCESS_FINE_LOCATION,
-                                            android.Manifest.permission.ACCESS_COARSE_LOCATION
-                                        )
-                                    )
-                                }
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            modifier = Modifier.height(28.dp)
-                        ) {
-                            if (isDetectingGps) {
-                                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = SupabaseGreen)
-                            } else {
-                                Text("Update GPS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SupabaseGreen)
+                    // Row 4: Smart Multi-Source GPS + Real-Time + Auto Address Section
+                    GpsSmartCoordinateSection(
+                        latitudeStr = latitudeStr,
+                        longitudeStr = longitudeStr,
+                        currentAddress = address,
+                        autoLockInitialIfEmpty = false,
+                        onCoordinatesChanged = { newLat, newLng ->
+                            latitudeStr = newLat
+                            longitudeStr = newLng
+                        },
+                        onAutoAddressResolved = { resolvedAddr, forceApply ->
+                            if (forceApply || address.isBlank() || address == lastAutoAddress) {
+                                address = resolvedAddr
+                                lastAutoAddress = resolvedAddr
                             }
                         }
-                    }
-
-                    if (showManualGps) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = latitudeStr,
-                                onValueChange = { latitudeStr = it },
-                                label = { Text("Latitude") },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = SupabaseGreen,
-                                    unfocusedBorderColor = CharcoalBorder,
-                                    focusedTextColor = TextPrimaryDark,
-                                    unfocusedTextColor = TextPrimaryDark
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = longitudeStr,
-                                onValueChange = { longitudeStr = it },
-                                label = { Text("Longitude") },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = SupabaseGreen,
-                                    unfocusedBorderColor = CharcoalBorder,
-                                    focusedTextColor = TextPrimaryDark,
-                                    unfocusedTextColor = TextPrimaryDark
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+                    )
                 }
             } else {
                 // Tab 1: Minimalist Harga Khusus & Titip Lalu per Produk
@@ -1969,6 +1814,7 @@ private fun EditCustomerAndPricesDialog(
                     )
                 } else {
                     LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(allProducts, key = { it.id }) { prod ->
@@ -2167,6 +2013,7 @@ private fun EditCustomerAndPricesDialog(
         PhotoChooserBottomSheet(
             title = "Foto Warung: $name",
             hasExistingPhoto = !photoUri.isNullOrBlank(),
+            existingPhotoUri = photoUri,
             onPhotoSelected = { uri ->
                 photoUri = uri
                 showPhotoChooser = false
@@ -2182,6 +2029,11 @@ private fun EditCustomerAndPricesDialog(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Text("Hapus Warung?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
@@ -2212,3 +2064,407 @@ private fun EditCustomerAndPricesDialog(
         )
     }
 }
+
+/**
+ * Reusable Multi-Source Real-Time GPS & Auto Reverse-Geocoding Coordinate Component.
+ * - Combines Google Play Fused Location (GMaps engine), Hardware Satellite GPS (100% Offline), and Network providers.
+ * - Continuously refines coordinates when live tracking is active.
+ * - Automatically converts (latitude, longitude) to a street address when online or from offline local cache.
+ * - Supports 1-tap paste from Google Maps URLs or coordinate strings.
+ */
+@Composable
+fun GpsSmartCoordinateSection(
+    latitudeStr: String,
+    longitudeStr: String,
+    currentAddress: String,
+    autoLockInitialIfEmpty: Boolean = false,
+    alwaysExpandInputs: Boolean = false,
+    onCoordinatesChanged: (latStr: String, lngStr: String) -> Unit,
+    onAutoAddressResolved: (resolvedAddress: String, forceApply: Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val isOnline by LocationHelper.observeOnlineStatus(context)
+        .collectAsStateWithLifecycle(initialValue = LocationHelper.isOnline(context))
+
+    var isDetectingGps by remember { mutableStateOf(false) }
+    var isGeocoding by remember { mutableStateOf(false) }
+    var showManualInputs by remember { mutableStateOf(alwaysExpandInputs) }
+    var liveProviderLabel by remember { mutableStateOf(LocationHelper.getProviderDisplayLabel(null, isOnline)) }
+    var liveAccuracyMeters by remember { mutableStateOf<Float?>(null) }
+    var resolvedGpsAddress by remember { mutableStateOf<String?>(null) }
+    var bestSessionLocation by remember { mutableStateOf<android.location.Location?>(null) }
+
+    fun applyLocationFix(loc: android.location.Location) {
+        bestSessionLocation = loc
+        liveProviderLabel = LocationHelper.getProviderDisplayLabel(loc, isOnline)
+        if (loc.hasAccuracy()) {
+            liveAccuracyMeters = loc.accuracy
+        }
+        onCoordinatesChanged(
+            "%.6f".format(Locale.US, loc.latitude),
+            "%.6f".format(Locale.US, loc.longitude)
+        )
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val granted = perms[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            perms[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) {
+            isDetectingGps = true
+            scope.launch {
+                val loc = LocationHelper.getFreshLocation(
+                    context = context,
+                    timeoutMs = 6000L,
+                    targetAccuracyMeters = 8f,
+                    onIntermediateFix = { fix -> applyLocationFix(fix) }
+                )
+                if (loc != null) {
+                    applyLocationFix(loc)
+                }
+                isDetectingGps = false
+            }
+        }
+    }
+
+    // Automatically acquire initial high-accuracy fix and refine in real-time when empty/requested
+    LaunchedEffect(autoLockInitialIfEmpty) {
+        if (autoLockInitialIfEmpty && LocationHelper.hasLocationPermission(context)) {
+            if (latitudeStr.isBlank() || longitudeStr.isBlank()) {
+                isDetectingGps = true
+            }
+            val initial = LocationHelper.getFreshLocation(
+                context = context,
+                timeoutMs = 5500L,
+                targetAccuracyMeters = 8f,
+                onIntermediateFix = { fix ->
+                    if (latitudeStr.isBlank() || longitudeStr.isBlank() ||
+                        LocationHelper.isBetterLocation(fix, bestSessionLocation)
+                    ) {
+                        applyLocationFix(fix)
+                    }
+                }
+            )
+            if (initial != null && (latitudeStr.isBlank() || longitudeStr.isBlank() ||
+                    LocationHelper.isBetterLocation(initial, bestSessionLocation))
+            ) {
+                applyLocationFix(initial)
+            }
+            isDetectingGps = false
+        }
+    }
+
+    // Automatic Coordinate -> Street Address conversion whenever lat/lng or online status changes!
+    LaunchedEffect(latitudeStr, longitudeStr, isOnline) {
+        val lat = latitudeStr.toDoubleOrNull()
+        val lng = longitudeStr.toDoubleOrNull()
+        if (!LocationHelper.isValidCoordinate(lat, lng)) {
+            resolvedGpsAddress = null
+            return@LaunchedEffect
+        }
+
+        // Check instant offline cache first
+        val cached = LocationHelper.getCachedAddress(context, lat!!, lng!!)
+        if (!cached.isNullOrBlank()) {
+            resolvedGpsAddress = cached
+            onAutoAddressResolved(cached, false)
+            return@LaunchedEffect
+        }
+
+        if (!isOnline) {
+            resolvedGpsAddress = null
+            return@LaunchedEffect
+        }
+
+        delay(300) // Debounce manual coordinate typing
+        isGeocoding = true
+        val converted = LocationHelper.reverseGeocodeAddress(context, lat, lng)
+        isGeocoding = false
+        if (!converted.isNullOrBlank()) {
+            resolvedGpsAddress = converted
+            onAutoAddressResolved(converted, false)
+        }
+    }
+
+    val latVal = latitudeStr.toDoubleOrNull()
+    val lngVal = longitudeStr.toDoubleOrNull()
+    val hasValidCoords = LocationHelper.isValidCoordinate(latVal, lngVal)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
+            .border(
+                1.dp,
+                if (hasValidCoords) SupabaseGreen.copy(alpha = 0.4f) else CharcoalBorder,
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Top Line: Coordinate Status + Provider / Accuracy + Action Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { if (!alwaysExpandInputs) showManualInputs = !showManualInputs }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = if (hasValidCoords) SupabaseGreen else TextMutedDark,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (hasValidCoords) {
+                            "$latitudeStr, $longitudeStr"
+                        } else {
+                            "Titik Koordinat GPS"
+                        },
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (hasValidCoords) SupabaseGreen else TextSecondaryDark,
+                        maxLines = 1
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                val accBadge = liveAccuracyMeters?.let { " • ±${it.toInt().coerceAtLeast(1)}m" } ?: ""
+                val modeBadge = if (isOnline) "Online ($liveProviderLabel$accBadge)" else "Offline (Satelit GPS$accBadge)"
+                Text(
+                    text = modeBadge,
+                    fontSize = 10.sp,
+                    color = if (isOnline) Color(0xFF38BDF8) else AmberWarning,
+                    maxLines = 1
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // 1-Tap Paste from Google Maps / Clipboard
+                Box(
+                    modifier = Modifier
+                        .background(CharcoalSurface, RoundedCornerShape(6.dp))
+                        .border(1.dp, CharcoalBorder, RoundedCornerShape(6.dp))
+                        .clickable {
+                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            val clipText = cm?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+                            if (clipText.isBlank()) {
+                                showManualInputs = true
+                                Toast.makeText(context, "Salin koordinat atau link Google Maps lalu tempel", Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch {
+                                    isDetectingGps = true
+                                    val parsed = LocationHelper.parseCoordinatesOrMapsUrl(clipText)
+                                    isDetectingGps = false
+                                    if (parsed != null) {
+                                        onCoordinatesChanged(
+                                            "%.6f".format(Locale.US, parsed.first),
+                                            "%.6f".format(Locale.US, parsed.second)
+                                        )
+                                        Toast.makeText(context, "Koordinat GMaps berhasil ditempel!", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        showManualInputs = true
+                                        Toast.makeText(context, "Format clipboard bukan koordinat/link GMaps", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                        .padding(horizontal = 7.dp, vertical = 5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.ContentPaste,
+                            contentDescription = "Tempel GMaps",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "GMaps",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF38BDF8)
+                        )
+                    }
+                }
+
+                // 1-Tap High-Accuracy Multi-Source GPS Lock
+                Box(
+                    modifier = Modifier
+                        .background(SupabaseGreen.copy(alpha = 0.18f), RoundedCornerShape(6.dp))
+                        .border(1.dp, SupabaseGreen.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                        .clickable {
+                            if (LocationHelper.hasLocationPermission(context)) {
+                                isDetectingGps = true
+                                scope.launch {
+                                    val loc = LocationHelper.getFreshLocation(
+                                        context = context,
+                                        timeoutMs = 6000L,
+                                        targetAccuracyMeters = 8f,
+                                        onIntermediateFix = { fix -> applyLocationFix(fix) }
+                                    )
+                                    if (loc != null) {
+                                        applyLocationFix(loc)
+                                    }
+                                    isDetectingGps = false
+                                }
+                            } else {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                        android.Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        }
+                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isDetectingGps) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(11.dp),
+                                strokeWidth = 1.5.dp,
+                                color = SupabaseGreen
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.MyLocation,
+                                contentDescription = "Ambil GPS Akurat",
+                                tint = SupabaseGreen,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (hasValidCoords) "Akurat" else "Ambil GPS",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SupabaseGreen
+                        )
+                    }
+                }
+            }
+        }
+
+        // Auto-Converted Address Strip (Seamless Online / Offline Feedback)
+        if (hasValidCoords) {
+            if (isGeocoding) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(10.dp),
+                        strokeWidth = 1.5.dp,
+                        color = SupabaseGreen
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Mengonversi koordinat ke alamat jalan...",
+                        fontSize = 10.sp,
+                        color = TextSecondaryDark
+                    )
+                }
+            } else if (!resolvedGpsAddress.isNullOrBlank()) {
+                val addr = resolvedGpsAddress!!
+                val isDifferentFromField = currentAddress.isNotBlank() && !currentAddress.equals(addr, ignoreCase = true)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(CharcoalSurface, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Alamat GPS: $addr",
+                        fontSize = 10.5.sp,
+                        color = if (isDifferentFromField) TextSecondaryDark else SupabaseGreen,
+                        maxLines = 2,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isDifferentFromField) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Pakai",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SupabaseGreen,
+                            modifier = Modifier.clickable {
+                                onAutoAddressResolved(addr, true)
+                            }
+                        )
+                    }
+                }
+            } else if (!isOnline) {
+                Text(
+                    text = "Offline Satelit • Alamat otomatis dikonversi saat koneksi internet aktif",
+                    fontSize = 10.sp,
+                    color = AmberWarning
+                )
+            }
+        }
+
+        // Expandable / Manual Coordinate Inputs (also accepts pasted "lat, lng" or GMaps link)
+        if (showManualInputs || alwaysExpandInputs) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = latitudeStr,
+                    onValueChange = { input ->
+                        val parsedPair = LocationHelper.extractLatLngFromString(input)
+                        if (parsedPair != null) {
+                            onCoordinatesChanged(
+                                "%.6f".format(Locale.US, parsedPair.first),
+                                "%.6f".format(Locale.US, parsedPair.second)
+                            )
+                        } else {
+                            onCoordinatesChanged(input, longitudeStr)
+                        }
+                    },
+                    label = { Text("Latitude", fontSize = 10.5.sp) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SupabaseGreen,
+                        unfocusedBorderColor = CharcoalBorder,
+                        focusedTextColor = TextPrimaryDark,
+                        unfocusedTextColor = TextPrimaryDark
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = longitudeStr,
+                    onValueChange = { input ->
+                        val parsedPair = LocationHelper.extractLatLngFromString(input)
+                        if (parsedPair != null) {
+                            onCoordinatesChanged(
+                                "%.6f".format(Locale.US, parsedPair.first),
+                                "%.6f".format(Locale.US, parsedPair.second)
+                            )
+                        } else {
+                            onCoordinatesChanged(latitudeStr, input)
+                        }
+                    },
+                    label = { Text("Longitude", fontSize = 10.5.sp) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SupabaseGreen,
+                        unfocusedBorderColor = CharcoalBorder,
+                        focusedTextColor = TextPrimaryDark,
+                        unfocusedTextColor = TextPrimaryDark
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+

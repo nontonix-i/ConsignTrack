@@ -603,7 +603,7 @@ fun AppMenuDrawerSheet(
     ModalDrawerSheet(
         drawerContainerColor = CharcoalBg,
         drawerContentColor = TextPrimaryDark,
-        modifier = Modifier.fillMaxWidth(0.86f)
+        modifier = Modifier.fillMaxWidth(0.92f)
     ) {
         Column(
             modifier = Modifier
@@ -1127,6 +1127,11 @@ fun AppMenuDrawerSheet(
 
         AlertDialog(
             onDismissRequest = { showEditBusinessDialog = false },
+            modifier = Modifier
+                .fillMaxWidth(0.96f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Text(
@@ -1138,7 +1143,9 @@ fun AppMenuDrawerSheet(
             },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedTextField(
@@ -1146,6 +1153,7 @@ fun AppMenuDrawerSheet(
                         onValueChange = { nameInput = it },
                         label = { Text(if (isEn) "Business Name" else "Nama Usaha / Distributor") },
                         singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
                             unfocusedBorderColor = CharcoalBorder,
@@ -1158,6 +1166,7 @@ fun AppMenuDrawerSheet(
                         onValueChange = { addrInput = it },
                         label = { Text(if (isEn) "Address / Tagline" else "Alamat / Subjudul Nota") },
                         singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
                             unfocusedBorderColor = CharcoalBorder,
@@ -1170,6 +1179,7 @@ fun AppMenuDrawerSheet(
                         onValueChange = { phoneInput = it },
                         label = { Text(if (isEn) "Phone / WhatsApp" else "No. Telepon / WhatsApp") },
                         singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
                             unfocusedBorderColor = CharcoalBorder,
@@ -1207,6 +1217,11 @@ fun AppMenuDrawerSheet(
 
         AlertDialog(
             onDismissRequest = { showEditAiConfigDialog = false },
+            modifier = Modifier
+                .fillMaxWidth(0.96f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Row(
@@ -1240,7 +1255,9 @@ fun AppMenuDrawerSheet(
             },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(

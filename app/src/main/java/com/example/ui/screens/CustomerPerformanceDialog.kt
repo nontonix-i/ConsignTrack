@@ -42,13 +42,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
 import com.example.domain.model.CustomerPerformance
 import com.example.domain.model.CustomerVisitRecord
 import com.example.ui.theme.AmberWarning
@@ -80,9 +83,9 @@ fun CustomerPerformanceDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.95f)
+                .fillMaxWidth(0.97f)
                 .systemBarsPadding()
-                .heightIn(max = 660.dp)
+                .heightIn(max = 700.dp)
                 .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
             color = CharcoalSurface
@@ -365,6 +368,20 @@ private fun VisitHistoryCard(record: CustomerVisitRecord) {
                         text = "Catatan: ${record.notes}",
                         fontSize = 10.5.sp,
                         color = TextMutedDark
+                    )
+                }
+
+                if (!record.photoUri.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    AsyncImage(
+                        model = record.photoUri,
+                        contentDescription = "Foto Kunjungan",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .border(1.dp, CharcoalBorder, RoundedCornerShape(6.dp))
                     )
                 }
             }

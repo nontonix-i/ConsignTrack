@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -83,6 +85,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.domain.model.ReconciliationItem
@@ -325,6 +328,7 @@ fun ReconciliationScreen(
         PhotoChooserBottomSheet(
             title = "Foto Kunjungan / Rak Warung",
             hasExistingPhoto = uiState.visitPhotoUri != null,
+            existingPhotoUri = uiState.visitPhotoUri,
             onPhotoSelected = { uri ->
                 viewModel.updateVisitPhoto(uri)
                 showPhotoChooser = false
@@ -366,9 +370,21 @@ fun ReconciliationScreen(
         var editPhone by remember(currentCust) { mutableStateOf(currentCust.phone) }
         var editRouteDay by remember(currentCust) { mutableStateOf(currentCust.route_day) }
         var editRouteOrder by remember(currentCust) { mutableStateOf(currentCust.route_order.toString()) }
+        var editLatStr by remember(currentCust) {
+            mutableStateOf(currentCust.latitude?.let { "%.6f".format(Locale.US, it) } ?: "")
+        }
+        var editLngStr by remember(currentCust) {
+            mutableStateOf(currentCust.longitude?.let { "%.6f".format(Locale.US, it) } ?: "")
+        }
+        var lastAutoAddr by remember(currentCust) { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = { showEditWarungInfoDialog = false },
+            modifier = Modifier
+                .fillMaxWidth(0.96f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Text(
@@ -379,7 +395,12 @@ fun ReconciliationScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
@@ -450,6 +471,23 @@ fun ReconciliationScreen(
                             modifier = Modifier.weight(0.52f)
                         )
                     }
+
+                    GpsSmartCoordinateSection(
+                        latitudeStr = editLatStr,
+                        longitudeStr = editLngStr,
+                        currentAddress = editAddress,
+                        autoLockInitialIfEmpty = false,
+                        onCoordinatesChanged = { newLat, newLng ->
+                            editLatStr = newLat
+                            editLngStr = newLng
+                        },
+                        onAutoAddressResolved = { resolvedAddr, forceApply ->
+                            if (forceApply || editAddress.isBlank() || editAddress == lastAutoAddr) {
+                                editAddress = resolvedAddr
+                                lastAutoAddr = resolvedAddr
+                            }
+                        }
+                    )
                 }
             },
             confirmButton = {
@@ -462,7 +500,9 @@ fun ReconciliationScreen(
                                     address = editAddress.trim(),
                                     phone = editPhone.trim(),
                                     route_day = editRouteDay.trim().ifBlank { currentCust.route_day },
-                                    route_order = editRouteOrder.toIntOrNull() ?: currentCust.route_order
+                                    route_order = editRouteOrder.toIntOrNull() ?: currentCust.route_order,
+                                    latitude = editLatStr.toDoubleOrNull(),
+                                    longitude = editLngStr.toDoubleOrNull()
                                 )
                             )
                             showEditWarungInfoDialog = false
@@ -563,12 +603,23 @@ private fun MinimalistVisitHeaderBar(
                     .padding(horizontal = 7.dp, vertical = 4.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.CameraAlt,
-                        contentDescription = "Foto Rak",
-                        tint = if (photoUri != null) SupabaseGreen else TextSecondaryDark,
-                        modifier = Modifier.size(12.dp)
-                    )
+                    if (photoUri != null) {
+                        AsyncImage(
+                            model = photoUri,
+                            contentDescription = "Foto Rak",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(15.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = "Foto Rak",
+                            tint = TextSecondaryDark,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (photoUri != null) "Foto ✓" else "Foto",
@@ -890,6 +941,11 @@ private fun ReconciliationItemCard(
 
         AlertDialog(
             onDismissRequest = { showDirectInputFor = null },
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Text(
@@ -904,7 +960,10 @@ private fun ReconciliationItemCard(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = inputStr,
                         onValueChange = { inputStr = it.filter { ch -> ch.isDigit() } },
@@ -984,6 +1043,11 @@ private fun ReconciliationItemCard(
 
         AlertDialog(
             onDismissRequest = { showPriceEditDialog = false },
+            modifier = Modifier
+                .fillMaxWidth(0.96f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Row(
@@ -1093,6 +1157,11 @@ private fun ReconciliationItemCard(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Text("Hapus Produk?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)

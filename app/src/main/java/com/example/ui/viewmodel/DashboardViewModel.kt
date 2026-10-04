@@ -11,6 +11,9 @@ import com.example.data.repository.ConsignmentRepository
 import com.example.domain.model.CustomerPerformance
 import com.example.domain.model.CustomerWithStatus
 import com.example.util.LocationHelper
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,9 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
 
 enum class RouteFilter {
     ALL,
@@ -47,6 +47,10 @@ data class DashboardUiState(
     val sortOption: CustomerSortOption = CustomerSortOption.NEAREST,
     val userLocation: Location? = null,
     val isLocating: Boolean = false,
+    val isOnline: Boolean = true,
+    val gpsProviderLabel: String = "Multi-GPS",
+    val gpsAccuracyMeters: Float? = null,
+    val pendingOfflineAddressCount: Int = 0,
     val dayCounts: Map<String, Int> = emptyMap(),
     val totalPiecesConsigned: Int = 0,
     val todayTotalSoldAmount: Double = 0.0,
@@ -73,9 +77,41 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isLocating = MutableStateFlow(false)
     val isLocating: StateFlow<Boolean> = _isLocating.asStateFlow()
 
+    private val _isOnline = MutableStateFlow(LocationHelper.isOnline(application))
+    val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
+
+    private var locationTrackingJob: Job? = null
+    private var addressSyncJob: Job? = null
+
     init {
-        // Otomatis mulai pelacakan lokasi real-time jika izin tersedia
         startLocationTracking()
+        observeNetworkAndAutoSyncAddresses()
+    }
+
+    private fun observeNetworkAndAutoSyncAddresses() {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            LocationHelper.observeOnlineStatus(app).collect { online ->
+                _isOnline.value = online
+                if (online) {
+                    triggerAutoReverseGeocodeSync()
+                }
+            }
+        }
+    }
+
+    /**
+     * Automatically converts any saved warung coordinates (latitude, longitude) that don't have
+     * a street address yet into a full address when online or from local cache.
+     */
+    fun triggerAutoReverseGeocodeSync() {
+        val app = getApplication<Application>()
+        if (addressSyncJob?.isActive == true) return
+        addressSyncJob = viewModelScope.launch {
+            runCatching {
+                repository.syncMissingAddressesFromCoordinates(app)
+            }
+        }
     }
 
     val uiState: StateFlow<DashboardUiState> = combine(
@@ -85,6 +121,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _sortOption,
         _userLocation,
         _isLocating,
+        _isOnline,
         repository.totalPiecesConsigned,
         repository.todayTotalSoldAmount,
         repository.allProducts
@@ -96,10 +133,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val sort = args[3] as CustomerSortOption
         val userLoc = args[4] as? Location
         val locating = args[5] as Boolean
-        val totalPieces = args[6] as Int
-        val todayAmount = args[7] as Double
+        val online = args[6] as Boolean
+        val totalPieces = args[7] as Int
+        val todayAmount = args[8] as Double
         @Suppress("UNCHECKED_CAST")
-        val products = args[8] as List<Product>
+        val products = args[9] as List<Product>
 
         val today = getTodayDayName()
         val counts = rawCustomers.groupBy { it.customer.route_day }.mapValues { it.value.size }
@@ -118,6 +156,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 null
             }
             item.copy(distanceMeters = dist)
+        }
+
+        val pendingAddressCount = customersWithDistance.count { item ->
+            LocationHelper.isValidCoordinate(item.customer.latitude, item.customer.longitude) &&
+                LocationHelper.isAddressNeedingAutoConversion(item.customer.address)
+        }
+
+        if (online && pendingAddressCount > 0) {
+            triggerAutoReverseGeocodeSync()
         }
 
         // Filter Hari
@@ -163,6 +210,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             sortOption = sort,
             userLocation = userLoc,
             isLocating = locating,
+            isOnline = online,
+            gpsProviderLabel = LocationHelper.getProviderDisplayLabel(userLoc, online),
+            gpsAccuracyMeters = if (userLoc?.hasAccuracy() == true) userLoc.accuracy else null,
+            pendingOfflineAddressCount = pendingAddressCount,
             dayCounts = counts,
             totalPiecesConsigned = totalPieces,
             todayTotalSoldAmount = todayAmount,
@@ -181,19 +232,29 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun startLocationTracking() {
         val app = getApplication<Application>()
         if (!LocationHelper.hasLocationPermission(app)) return
+        if (locationTrackingJob?.isActive == true) return
 
-        viewModelScope.launch {
+        locationTrackingJob = viewModelScope.launch {
             _isLocating.value = true
-            // Ambil fast location dulu
-            val initial = LocationHelper.getFreshLocation(app, timeoutMs = 4000L)
-            if (initial != null) {
+            // Ambil multi-source high-accuracy location dengan progressive callback
+            val initial = LocationHelper.getFreshLocation(
+                context = app,
+                timeoutMs = 5500L,
+                targetAccuracyMeters = 10f,
+                onIntermediateFix = { fix ->
+                    if (LocationHelper.isBetterLocation(fix, _userLocation.value)) {
+                        _userLocation.value = fix
+                    }
+                }
+            )
+            if (initial != null && LocationHelper.isBetterLocation(initial, _userLocation.value)) {
                 _userLocation.value = initial
             }
             _isLocating.value = false
 
-            // Dapatkan continuous flow pembaruan real-time
-            LocationHelper.getLocationFlow(app).collect { loc ->
-                if (loc != null) {
+            // Dapatkan continuous flow pembaruan real-time (Fused GMaps + Satelit GPS Offline)
+            LocationHelper.getLocationFlow(app, intervalMs = 2500L).collect { loc ->
+                if (loc != null && LocationHelper.isBetterLocation(loc, _userLocation.value)) {
                     _userLocation.value = loc
                 }
             }
@@ -202,13 +263,24 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun refreshLocation() {
         val app = getApplication<Application>()
+        if (!LocationHelper.hasLocationPermission(app)) return
         viewModelScope.launch {
             _isLocating.value = true
-            val loc = LocationHelper.getFreshLocation(app, timeoutMs = 6000L)
+            val loc = LocationHelper.getFreshLocation(
+                context = app,
+                timeoutMs = 6500L,
+                targetAccuracyMeters = 8f,
+                onIntermediateFix = { fix ->
+                    _userLocation.value = fix
+                }
+            )
             if (loc != null) {
                 _userLocation.value = loc
             }
             _isLocating.value = false
+            if (_isOnline.value) {
+                triggerAutoReverseGeocodeSync()
+            }
         }
     }
 
@@ -238,11 +310,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         latitude: Double? = null,
         longitude: Double? = null
     ) {
+        val app = getApplication<Application>()
         viewModelScope.launch {
+            var finalAddress = address.trim()
+            if (LocationHelper.isValidCoordinate(latitude, longitude) &&
+                LocationHelper.isAddressNeedingAutoConversion(finalAddress)
+            ) {
+                // Coba ambil dari cache offline dulu atau konversi langsung jika online
+                val resolved = LocationHelper.reverseGeocodeAddress(app, latitude!!, longitude!!)
+                if (!resolved.isNullOrBlank()) {
+                    finalAddress = resolved
+                }
+            }
+
             repository.saveCustomer(
                 Customer(
                     name = name,
-                    address = address,
+                    address = finalAddress,
                     phone = phone,
                     route_day = routeDay,
                     route_order = routeOrder,
@@ -255,8 +339,22 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun updateCustomer(customer: Customer) {
+        val app = getApplication<Application>()
         viewModelScope.launch {
-            repository.saveCustomer(customer)
+            var finalCust = customer
+            if (LocationHelper.isValidCoordinate(customer.latitude, customer.longitude) &&
+                LocationHelper.isAddressNeedingAutoConversion(customer.address)
+            ) {
+                val resolved = LocationHelper.reverseGeocodeAddress(
+                    app,
+                    customer.latitude!!,
+                    customer.longitude!!
+                )
+                if (!resolved.isNullOrBlank()) {
+                    finalCust = customer.copy(address = resolved)
+                }
+            }
+            repository.saveCustomer(finalCust)
         }
     }
 
@@ -264,9 +362,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         customer: Customer,
         productStocksAndPrices: List<Triple<Long, Int, Double?>>
     ) {
+        val app = getApplication<Application>()
         viewModelScope.launch {
+            var finalCust = customer
+            if (LocationHelper.isValidCoordinate(customer.latitude, customer.longitude) &&
+                LocationHelper.isAddressNeedingAutoConversion(customer.address)
+            ) {
+                val resolved = LocationHelper.reverseGeocodeAddress(
+                    app,
+                    customer.latitude!!,
+                    customer.longitude!!
+                )
+                if (!resolved.isNullOrBlank()) {
+                    finalCust = customer.copy(address = resolved)
+                }
+            }
             repository.saveCustomerWithCustomPricesAndStocks(
-                customer = customer,
+                customer = finalCust,
                 productConfigs = productStocksAndPrices
             )
         }
@@ -278,9 +390,27 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun updateCustomerLocation(customerId: Long, latitude: Double?, longitude: Double?) {
+    fun updateCustomerLocation(
+        customerId: Long,
+        latitude: Double?,
+        longitude: Double?,
+        resolvedAddress: String? = null
+    ) {
+        val app = getApplication<Application>()
         viewModelScope.launch {
-            repository.updateCustomerLocation(customerId, latitude, longitude)
+            var addressToSave = resolvedAddress?.trim()
+            if (addressToSave.isNullOrBlank() && LocationHelper.isValidCoordinate(latitude, longitude)) {
+                val existing = repository.getCustomerById(customerId)
+                if (existing != null && LocationHelper.isAddressNeedingAutoConversion(existing.address)) {
+                    addressToSave = LocationHelper.reverseGeocodeAddress(app, latitude!!, longitude!!)
+                }
+            }
+            repository.updateCustomerLocation(
+                customerId = customerId,
+                lat = latitude,
+                lng = longitude,
+                resolvedAddress = addressToSave
+            )
         }
     }
 

@@ -90,10 +90,9 @@ fun BackupRestoreDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .border(1.dp, CharcoalBorder, RoundedCornerShape(14.dp)),
-            shape = RoundedCornerShape(14.dp),
+                .fillMaxWidth(0.96f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
             color = CharcoalSurface
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -482,6 +481,11 @@ fun BackupRestoreSectionContent(
     if (showConfirmClearAll) {
         AlertDialog(
             onDismissRequest = { showConfirmClearAll = false },
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
                 Text(

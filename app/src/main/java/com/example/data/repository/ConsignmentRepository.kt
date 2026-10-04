@@ -121,9 +121,48 @@ class ConsignmentRepository(
         customerDao.updateCustomer(cust.copy(route_day = routeDay, route_order = routeOrder))
     }
 
-    suspend fun updateCustomerLocation(customerId: Long, lat: Double?, lng: Double?) = withContext(Dispatchers.IO) {
+    suspend fun updateCustomerLocation(
+        customerId: Long,
+        lat: Double?,
+        lng: Double?,
+        resolvedAddress: String? = null
+    ) = withContext(Dispatchers.IO) {
         val cust = customerDao.getCustomerByIdDirect(customerId) ?: return@withContext
-        customerDao.updateCustomer(cust.copy(latitude = lat, longitude = lng))
+        val updatedAddress = if (!resolvedAddress.isNullOrBlank()) {
+            resolvedAddress.trim()
+        } else {
+            cust.address
+        }
+        customerDao.updateCustomer(
+            cust.copy(
+                latitude = lat,
+                longitude = lng,
+                address = updatedAddress
+            )
+        )
+    }
+
+    /**
+     * Automatically converts GPS coordinates (latitude, longitude) into street addresses
+     * for any warung whose address is still blank or a temporary offline coordinate placeholder.
+     */
+    suspend fun syncMissingAddressesFromCoordinates(context: android.content.Context): Int = withContext(Dispatchers.IO) {
+        val customers = customerDao.getAllCustomersDirect()
+        var convertedCount = 0
+        for (cust in customers) {
+            val lat = cust.latitude
+            val lng = cust.longitude
+            if (com.example.util.LocationHelper.isValidCoordinate(lat, lng) &&
+                com.example.util.LocationHelper.isAddressNeedingAutoConversion(cust.address)
+            ) {
+                val resolved = com.example.util.LocationHelper.reverseGeocodeAddress(context, lat!!, lng!!)
+                if (!resolved.isNullOrBlank() && resolved != cust.address) {
+                    customerDao.updateCustomer(cust.copy(address = resolved))
+                    convertedCount++
+                }
+            }
+        }
+        convertedCount
     }
 
     // --- Products ---
