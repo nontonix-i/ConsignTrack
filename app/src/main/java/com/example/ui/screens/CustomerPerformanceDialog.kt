@@ -150,76 +150,44 @@ fun CustomerPerformanceDialog(
                 } else {
                     LazyColumn(
                         modifier = Modifier.weight(1f, fill = false),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Metric Cards (2x2 Grid)
+                        // Minimalist Summary Strip (3 key metrics in 1 compact row)
                         item {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    MetricTile(
-                                        label = "Total Omset",
-                                        value = "Rp %,.0f".format(performance.totalRevenue),
-                                        icon = Icons.Default.Payments,
-                                        accent = SupabaseGreen,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    MetricTile(
-                                        label = "Total Kunjungan",
-                                        value = "${performance.totalVisits} Kali",
-                                        icon = Icons.Default.ReceiptLong,
-                                        accent = Color(0xFF38BDF8),
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    MetricTile(
-                                        label = "Barang Terjual",
-                                        value = "${performance.totalSoldPieces} Pcs",
-                                        icon = Icons.Default.Inventory2,
-                                        accent = AmberWarning,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    MetricTile(
-                                        label = "Rata-rata/Visit",
-                                        value = "Rp %,.0f".format(performance.averageRevenuePerVisit),
-                                        icon = Icons.Default.Payments,
-                                        accent = SupabaseGreen,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Product Best Seller Banner
-                        if (!performance.topSellingProduct.isNullOrBlank()) {
-                            item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
-                                        .border(1.dp, CharcoalBorder, RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Star, contentDescription = null, tint = AmberWarning, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(CharcoalSurfaceElevated, RoundedCornerShape(10.dp))
+                                    .border(1.dp, CharcoalBorder, RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Total Omset", fontSize = 10.sp, color = TextSecondaryDark)
                                     Text(
-                                        text = "Produk Terlaris: ",
-                                        fontSize = 11.5.sp,
-                                        color = TextSecondaryDark
-                                    )
-                                    Text(
-                                        text = "${performance.topSellingProduct} (${performance.topSellingQuantity} Pcs)",
-                                        fontSize = 12.sp,
+                                        "Rp %,.0f".format(performance.totalRevenue),
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TextPrimaryDark
+                                        color = SupabaseGreen
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Kunjungan", fontSize = 10.sp, color = TextSecondaryDark)
+                                    Text(
+                                        "${performance.totalVisits}x",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF38BDF8)
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Terjual", fontSize = 10.sp, color = TextSecondaryDark)
+                                    Text(
+                                        "${performance.totalSoldPieces} pcs",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AmberWarning
                                     )
                                 }
                             }
@@ -230,18 +198,18 @@ fun CustomerPerformanceDialog(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 4.dp),
+                                    .padding(top = 2.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Riwayat Kunjungan (${performance.history.size})",
-                                    fontSize = 13.sp,
+                                    text = "Riwayat (${performance.history.size})",
+                                    fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimaryDark
                                 )
                                 Text(
-                                    text = "Stok Aktif: ${performance.currentConsignedPieces} Pcs",
+                                    text = "Stok Aktif: ${performance.currentConsignedPieces} pcs",
                                     fontSize = 11.sp,
                                     color = SupabaseGreen
                                 )

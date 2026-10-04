@@ -52,10 +52,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.screens.AppMenuDrawerSheet
+import com.example.ui.screens.BackupRestoreDialog
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.FinancialScreen
 import com.example.ui.screens.FloatingAiChatDialog
 import com.example.ui.screens.FloatingAiCsButton
+import com.example.ui.screens.GraphicsAnalysisScreen
 import com.example.ui.screens.ProductCatalogScreen
 import com.example.ui.screens.ReconciliationScreen
 import com.example.ui.theme.CharcoalBg
@@ -131,8 +133,10 @@ fun MainApp(
     val isEnglish = analyticsState.language == AppLanguage.EN
 
     var selectedTab by rememberSaveable { mutableStateOf(MainNavTab.ROUTES) }
+    var showGraphicsAnalysis by rememberSaveable { mutableStateOf(false) }
     var activeReconciliationCustomerId by rememberSaveable { mutableLongStateOf(-1L) }
     var showAiChatModal by rememberSaveable { mutableStateOf(false) }
+    var showBackupRestoreModal by rememberSaveable { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -152,9 +156,21 @@ fun MainApp(
                     viewModel = analyticsViewModel,
                     onNavigateTab = { tabKey ->
                         when (tabKey) {
-                            "ROUTES" -> selectedTab = MainNavTab.ROUTES
-                            "PRODUCTS" -> selectedTab = MainNavTab.PRODUCTS
-                            "FINANCE" -> selectedTab = MainNavTab.FINANCE
+                            "GRAPHICS" -> {
+                                showGraphicsAnalysis = true
+                            }
+                            "ROUTES" -> {
+                                showGraphicsAnalysis = false
+                                selectedTab = MainNavTab.ROUTES
+                            }
+                            "PRODUCTS" -> {
+                                showGraphicsAnalysis = false
+                                selectedTab = MainNavTab.PRODUCTS
+                            }
+                            "FINANCE" -> {
+                                showGraphicsAnalysis = false
+                                selectedTab = MainNavTab.FINANCE
+                            }
                         }
                     },
                     onOpenAiChat = {
@@ -194,9 +210,9 @@ fun MainApp(
                                     MainNavTab.entries.forEach { tab ->
                                         val isDrawerOpen = drawerState.isOpen
                                         val isSelected = if (tab == MainNavTab.MENU) {
-                                            isDrawerOpen
+                                            isDrawerOpen || showGraphicsAnalysis
                                         } else {
-                                            !isDrawerOpen && selectedTab == tab
+                                            !isDrawerOpen && !showGraphicsAnalysis && selectedTab == tab
                                         }
                                         val tabTitle = if (isEnglish) tab.titleEn else tab.titleId
 
@@ -212,6 +228,7 @@ fun MainApp(
                                                     coroutineScope.launch {
                                                         if (drawerState.isOpen) drawerState.close()
                                                     }
+                                                    showGraphicsAnalysis = false
                                                     selectedTab = tab
                                                 }
                                             },
@@ -246,32 +263,51 @@ fun MainApp(
                                     .fillMaxSize()
                                     .padding(bottom = innerPadding.calculateBottomPadding())
                             ) {
-                                when (selectedTab) {
-                                    MainNavTab.ROUTES -> {
-                                        DashboardScreen(
-                                            viewModel = dashboardViewModel,
-                                            onStartVisit = { targetCustId ->
-                                                activeReconciliationCustomerId = targetCustId
-                                            }
-                                        )
-                                    }
-                                    MainNavTab.PRODUCTS -> {
-                                        ProductCatalogScreen(
-                                            viewModel = productViewModel
-                                        )
-                                    }
-                                    MainNavTab.FINANCE -> {
-                                        FinancialScreen(
-                                            viewModel = financialViewModel
-                                        )
-                                    }
-                                    MainNavTab.MENU -> {
-                                        DashboardScreen(
-                                            viewModel = dashboardViewModel,
-                                            onStartVisit = { targetCustId ->
-                                                activeReconciliationCustomerId = targetCustId
-                                            }
-                                        )
+                                if (showGraphicsAnalysis) {
+                                    GraphicsAnalysisScreen(
+                                        viewModel = analyticsViewModel,
+                                        onNavigateBack = { showGraphicsAnalysis = false },
+                                        onOpenDrawer = {
+                                            coroutineScope.launch { drawerState.open() }
+                                        },
+                                        onOpenAiChat = {
+                                            showAiChatModal = true
+                                        }
+                                    )
+                                } else {
+                                    when (selectedTab) {
+                                        MainNavTab.ROUTES -> {
+                                            DashboardScreen(
+                                                viewModel = dashboardViewModel,
+                                                onStartVisit = { targetCustId ->
+                                                    activeReconciliationCustomerId = targetCustId
+                                                },
+                                                onOpenBackupRestore = {
+                                                    showBackupRestoreModal = true
+                                                }
+                                            )
+                                        }
+                                        MainNavTab.PRODUCTS -> {
+                                            ProductCatalogScreen(
+                                                viewModel = productViewModel
+                                            )
+                                        }
+                                        MainNavTab.FINANCE -> {
+                                            FinancialScreen(
+                                                viewModel = financialViewModel
+                                            )
+                                        }
+                                        MainNavTab.MENU -> {
+                                            DashboardScreen(
+                                                viewModel = dashboardViewModel,
+                                                onStartVisit = { targetCustId ->
+                                                    activeReconciliationCustomerId = targetCustId
+                                                },
+                                                onOpenBackupRestore = {
+                                                    showBackupRestoreModal = true
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -298,6 +334,14 @@ fun MainApp(
             FloatingAiChatDialog(
                 viewModel = analyticsViewModel,
                 onDismiss = { showAiChatModal = false }
+            )
+        }
+
+        // Backup & Restore (.ZIP + Photos) Modal Dialog
+        if (showBackupRestoreModal) {
+            BackupRestoreDialog(
+                viewModel = analyticsViewModel,
+                onDismiss = { showBackupRestoreModal = false }
             )
         }
     }

@@ -46,6 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -234,21 +235,43 @@ fun FloatingAiChatDialog(
     val listState = rememberLazyListState()
 
     val presetQuestions = if (isEn) {
-        listOf(
-            "Top selling store?",
-            "Total consigned stock?",
-            "Current net profit?",
-            "Unvisited stores today?",
-            "Highest margin product?"
-        )
+        if (uiState.agentModeEnabled) {
+            listOf(
+                "Tambah warung Toko Maju di Jl. Merdeka",
+                "Tambah produk Keripik Singkong harga 18000",
+                "Set stok Kerupuk Udang di Warung Bu Siti 45 pcs",
+                "Catat pengeluaran bensin 25000",
+                "Top selling store?",
+                "Current net profit?"
+            )
+        } else {
+            listOf(
+                "Top selling store?",
+                "Total consigned stock?",
+                "Current net profit?",
+                "Unvisited stores today?",
+                "Highest margin product?"
+            )
+        }
     } else {
-        listOf(
-            "Toko terlaris?",
-            "Total stok tersebar?",
-            "Laba bersih saat ini?",
-            "Warung belum dikunjungi?",
-            "Margin produk tertinggi?"
-        )
+        if (uiState.agentModeEnabled) {
+            listOf(
+                "Tambah warung Toko Maju di Jl. Merdeka",
+                "Tambah produk Keripik Singkong harga 18000",
+                "Set stok Kerupuk Udang di Warung Bu Siti 45 pcs",
+                "Catat pengeluaran bensin 25000",
+                "Toko terlaris?",
+                "Laba bersih saat ini?"
+            )
+        } else {
+            listOf(
+                "Toko terlaris?",
+                "Total stok tersebar?",
+                "Laba bersih saat ini?",
+                "Warung belum dikunjungi?",
+                "Margin produk tertinggi?"
+            )
+        }
     }
 
     val density = LocalDensity.current
@@ -354,7 +377,11 @@ fun FloatingAiChatDialog(
                                 )
                             }
                             Text(
-                                text = if (isEn) "Online • Real-time Business Data" else "Online • Analisis Data Bisnis Real-time",
+                                text = if (uiState.agentModeEnabled) {
+                                    if (isEn) "Agent Mode • Add, Edit & Erase Tools" else "Agent Mode Aktif • Bisa Tambah, Edit & Hapus"
+                                } else {
+                                    if (isEn) "Online • Real-time Business Data" else "Online • Analisis Data Bisnis Real-time"
+                                },
                                 fontSize = 10.5.sp,
                                 color = SupabaseGreen,
                                 maxLines = 1,
@@ -364,6 +391,26 @@ fun FloatingAiChatDialog(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier
+                                .clickable { viewModel.setAgentModeEnabled(!uiState.agentModeEnabled) }
+                                .border(
+                                    1.dp,
+                                    if (uiState.agentModeEnabled) SupabaseGreen else CharcoalBorder,
+                                    RoundedCornerShape(12.dp)
+                                ),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (uiState.agentModeEnabled) SupabaseGreen.copy(alpha = 0.16f) else CharcoalSurfaceElevated
+                        ) {
+                            Text(
+                                text = if (uiState.agentModeEnabled) "⚡ AGENT ON" else "AGENT OFF",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (uiState.agentModeEnabled) SupabaseGreen else TextSecondaryDark,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                         IconButton(
                             onClick = { viewModel.clearChatHistory() },
                             modifier = Modifier.size(32.dp)
@@ -639,15 +686,97 @@ fun AppMenuDrawerSheet(
                 }
             }
 
-            // 2. Quick Shortcuts Section
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // 2. Quick Shortcuts Section (Includes Graphics & Chart Analysis in Drawer only)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = if (isEn) "QUICK SHORTCUTS" else "PINTASAN MENU",
+                    text = if (isEn) "ANALYTICS & NAVIGATION" else "ANALISIS GRAFIK & PINTASAN MENU",
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp,
                     color = TextMutedDark
                 )
+
+                // Featured Modern Graphics & Chart Analysis Menu Banner (Drawer-exclusive)
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onNavigateTab("GRAPHICS")
+                            onCloseDrawer()
+                        }
+                        .border(1.2.dp, SupabaseGreen.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                        .testTag("drawer_graphics_analysis_menu"),
+                    shape = RoundedCornerShape(12.dp),
+                    color = CharcoalSurface
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        SupabaseGreen.copy(alpha = 0.16f),
+                                        BlueInfo.copy(alpha = 0.08f),
+                                         Color.Transparent
+                                    )
+                                )
+                            )
+                            .padding(horizontal = 12.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .background(SupabaseGreen.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                    .border(1.dp, SupabaseGreen, RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.BarChart,
+                                    contentDescription = null,
+                                    tint = SupabaseGreen,
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (isEn) "Graphics & Chart Analysis" else "Analisis Grafik & Chart",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimaryDark
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .background(SupabaseGreen, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "CHART",
+                                            fontSize = 8.5.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFF042114)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = if (isEn) "Interactive revenue, stock & store charts" else "Visualisasi tren omset, stok produk & ranking warung",
+                                    fontSize = 10.5.sp,
+                                    color = TextSecondaryDark,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -701,6 +830,9 @@ fun AppMenuDrawerSheet(
                     )
                 }
             }
+
+            // 2.5 Backup & Restore (.ZIP + Photos) Card
+            BackupRestoreDrawerCard(viewModel = viewModel)
 
             // 3. General App Settings (Language, Theme, GPS, Floating AI)
             Card(
@@ -1393,7 +1525,7 @@ private fun ChatBubble(message: ChatMessage) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isUser) "Anda" else "Asisten AI",
+                            text = if (isUser) "Anda" else if (message.executedTools.isNotEmpty()) "AI Agent • Tool Executor" else "Asisten AI",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isUser) SupabaseGreen else Color(0xFF38BDF8)
@@ -1415,6 +1547,58 @@ private fun ChatBubble(message: ChatMessage) {
                             tint = TextMutedDark,
                             modifier = Modifier.size(13.dp)
                         )
+                    }
+                }
+
+                if (message.executedTools.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
+                            .border(1.dp, SupabaseGreen.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            text = "⚡ TOOL CALLS DIJALANKAN (${message.executedTools.size})",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SupabaseGreen,
+                            letterSpacing = 0.6.sp
+                        )
+                        message.executedTools.forEach { tool ->
+                            val badgeColor = when (tool.actionType) {
+                                "ADD" -> SupabaseGreen
+                                "ERASE" -> Color(0xFFF87171)
+                                else -> AmberWarning
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = badgeColor.copy(alpha = 0.18f),
+                                    modifier = Modifier.border(0.8.dp, badgeColor, RoundedCornerShape(4.dp))
+                                ) {
+                                    Text(
+                                        text = "${tool.actionType} • ${tool.toolName}",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = badgeColor,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Text(
+                                    text = tool.summary.replace("**", ""),
+                                    fontSize = 11.sp,
+                                    color = TextPrimaryDark,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
 

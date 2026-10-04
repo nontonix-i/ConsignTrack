@@ -177,102 +177,68 @@ private fun ProductCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, CharcoalBorder, RoundedCornerShape(14.dp)),
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = CharcoalSurface),
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            // Header Row: Name & Multi-Unit Badge
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Header Row: Name & Unit Info + Edit/Delete
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = p.name,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimaryDark
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .background(SupabaseGreen.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
-                                .border(1.dp, SupabaseGreen.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "1 ${p.unit_big} = ${p.pieces_per_pack} ${p.unit_small}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = SupabaseGreen
-                            )
-                        }
-                    }
+                    Text(
+                        text = "1 ${p.unit_big} = ${p.pieces_per_pack} ${p.unit_small} • Stok Aktif: ${p.formatPackAndPieces(item.totalConsignedStock)}",
+                        fontSize = 11.sp,
+                        color = TextSecondaryDark
+                    )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = TextSecondaryDark, modifier = Modifier.size(17.dp))
+                    IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = SupabaseGreen, modifier = Modifier.size(16.dp))
                     }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = TextMutedDark, modifier = Modifier.size(17.dp))
+                    IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = TextMutedDark, modifier = Modifier.size(16.dp))
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Pricing & Margin Grid: Per Pack and Per Pcs
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CharcoalSurfaceElevated, RoundedCornerShape(10.dp))
-                    .border(1.dp, CharcoalBorder, RoundedCornerShape(10.dp))
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("Modal", fontSize = 10.5.sp, color = TextMutedDark)
-                    Text("Rp %,.0f / %s".format(p.cost_price_pack, p.unit_big), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = AmberWarning)
-                    Text("(@ Rp %,.0f / %s)".format(p.cost_price, p.unit_small), fontSize = 10.sp, color = TextMutedDark)
-                }
-                Column {
-                    Text("Harga Jual", fontSize = 10.5.sp, color = TextMutedDark)
-                    Text("Rp %,.0f / %s".format(p.selling_price_pack, p.unit_big), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
-                    Text("(@ Rp %,.0f / %s)".format(p.selling_price, p.unit_small), fontSize = 10.sp, color = TextMutedDark)
-                }
-                Column {
-                    Text("Laba", fontSize = 10.5.sp, color = TextMutedDark)
-                    Text(
-                        "+Rp %,.0f".format(item.profitMarginPack),
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SupabaseGreen
-                    )
-                    Text("%.0f%%".format(item.profitMarginPercentage), fontSize = 10.sp, color = SupabaseGreen)
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Active Stock Across All Stores in Pack + Pcs
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Inventory2, contentDescription = null, tint = SupabaseGreen, modifier = Modifier.size(13.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Stok: ",
-                    fontSize = 11.5.sp,
-                    color = TextSecondaryDark
-                )
-                Text(
-                    text = p.formatPackAndPieces(item.totalConsignedStock),
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark
-                )
+            // Minimalist Pricing Strip
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Modal / ${p.unit_big}", fontSize = 10.sp, color = TextMutedDark)
+                    Text("Rp %,.0f".format(p.cost_price_pack), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondaryDark)
+                }
+                Column {
+                    Text("Jual / ${p.unit_big}", fontSize = 10.sp, color = TextMutedDark)
+                    Text("Rp %,.0f".format(p.selling_price_pack), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Laba / ${p.unit_big}", fontSize = 10.sp, color = TextMutedDark)
+                    Text(
+                        "+Rp %,.0f (%.0f%%)".format(item.profitMarginPack, item.profitMarginPercentage),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SupabaseGreen
+                    )
+                }
             }
         }
     }

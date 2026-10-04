@@ -48,4 +48,16 @@ interface TransactionDao {
 
     @Query("SELECT COALESCE(SUM(total_sold_amount), 0) FROM transaction_headers WHERE transaction_date >= :startOfDay")
     fun getTodayTotalSoldAmount(startOfDay: Long): Flow<Double>
+
+    @Query("DELETE FROM transaction_details WHERE transaction_id = :headerId")
+    suspend fun deleteDetailsForHeader(headerId: Long)
+
+    @Query("DELETE FROM transaction_headers WHERE id = :headerId")
+    suspend fun deleteHeaderById(headerId: Long)
+
+    @Query("DELETE FROM transaction_details")
+    suspend fun deleteAllDetails()
+
+    @Query("DELETE FROM transaction_headers")
+    suspend fun deleteAllHeaders()
 }

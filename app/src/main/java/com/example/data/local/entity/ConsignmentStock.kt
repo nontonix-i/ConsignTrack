@@ -37,6 +37,20 @@ data class ConsignmentStock(
     val product_id: Long,
     @ColumnInfo(name = "current_quantity")
     val current_quantity: Int,
+    @ColumnInfo(name = "custom_price_pack")
+    val custom_price_pack: Double? = null,
     @ColumnInfo(name = "last_updated")
     val last_updated: Long = System.currentTimeMillis()
-)
+) {
+    fun effectivePricePack(product: Product): Double =
+        if (custom_price_pack != null && custom_price_pack > 0.0) custom_price_pack else product.selling_price_pack
+
+    fun effectivePriceUnit(product: Product): Double =
+        if (custom_price_pack != null && custom_price_pack > 0.0) {
+            if (product.pieces_per_pack > 0) custom_price_pack / product.pieces_per_pack else custom_price_pack
+        } else {
+            product.selling_price
+        }
+
+    fun effectivePriceSmall(product: Product): Double = effectivePriceUnit(product)
+}

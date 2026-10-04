@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.entity.Customer
+import com.example.data.local.entity.Product
 import com.example.data.repository.ConsignmentRepository
 import com.example.domain.model.CustomerPerformance
 import com.example.domain.model.CustomerWithStatus
@@ -39,6 +40,7 @@ enum class CustomerSortOption(val label: String, val shortLabel: String) {
 data class DashboardUiState(
     val allCustomers: List<CustomerWithStatus> = emptyList(),
     val filteredCustomers: List<CustomerWithStatus> = emptyList(),
+    val allProducts: List<Product> = emptyList(),
     val todayDayName: String = DashboardViewModel.getTodayDayName(),
     val selectedDay: String = DashboardViewModel.getTodayDayName(),
     val filter: RouteFilter = RouteFilter.ALL,
@@ -84,7 +86,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _userLocation,
         _isLocating,
         repository.totalPiecesConsigned,
-        repository.todayTotalSoldAmount
+        repository.todayTotalSoldAmount,
+        repository.allProducts
     ) { args: Array<Any?> ->
         @Suppress("UNCHECKED_CAST")
         val rawCustomers = args[0] as List<CustomerWithStatus>
@@ -95,6 +98,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val locating = args[5] as Boolean
         val totalPieces = args[6] as Int
         val todayAmount = args[7] as Double
+        @Suppress("UNCHECKED_CAST")
+        val products = args[8] as List<Product>
 
         val today = getTodayDayName()
         val counts = rawCustomers.groupBy { it.customer.route_day }.mapValues { it.value.size }
@@ -151,6 +156,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         DashboardUiState(
             allCustomers = customersWithDistance,
             filteredCustomers = sortedList,
+            allProducts = products,
             todayDayName = today,
             selectedDay = day,
             filter = filter,
@@ -251,6 +257,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun updateCustomer(customer: Customer) {
         viewModelScope.launch {
             repository.saveCustomer(customer)
+        }
+    }
+
+    fun saveCustomerWithPricesAndStocks(
+        customer: Customer,
+        productStocksAndPrices: List<Triple<Long, Int, Double?>>
+    ) {
+        viewModelScope.launch {
+            repository.saveCustomerWithCustomPricesAndStocks(
+                customer = customer,
+                productConfigs = productStocksAndPrices
+            )
         }
     }
 

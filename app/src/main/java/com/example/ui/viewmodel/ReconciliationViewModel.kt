@@ -108,7 +108,8 @@ class ReconciliationViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun addProductToOutlet(product: Product, initialPacks: Int) {
+    fun addProductToOutlet(product: Product, initialPacks: Int, customPricePack: Double? = null) {
+        val custId = _uiState.value.customer?.id
         _uiState.update { state ->
             if (state.items.any { it.product.id == product.id }) {
                 state.copy(showAddProductDialog = false)
@@ -120,10 +121,54 @@ class ReconciliationViewModel(application: Application) : AndroidViewModel(appli
                     isAutoSwapReturned = false,
                     manualReturnedQuantity = 0,
                     addedPacks = maxOf(1, initialPacks),
-                    addedPiecesExtra = 0
+                    addedPiecesExtra = 0,
+                    customPricePack = customPricePack?.takeIf { it > 0.0 }
                 )
                 state.copy(items = state.items + newItem, showAddProductDialog = false)
             }
+        }
+        if (custId != null && customPricePack != null && customPricePack > 0.0) {
+            viewModelScope.launch {
+                repository.updateProductCustomPriceForCustomer(custId, product.id, customPricePack)
+            }
+        }
+    }
+
+    fun updateCustomPricePack(productId: Long, customPricePack: Double?) {
+        val custId = _uiState.value.customer?.id
+        val normalizedPrice = customPricePack?.takeIf { it > 0.0 }
+        _uiState.update { state ->
+            val updated = state.items.map { item ->
+                if (item.product.id == productId) {
+                    item.copy(customPricePack = normalizedPrice)
+                } else item
+            }
+            state.copy(items = updated)
+        }
+        if (custId != null) {
+            viewModelScope.launch {
+                repository.updateProductCustomPriceForCustomer(custId, productId, normalizedPrice)
+            }
+        }
+    }
+
+    fun updatePreviousStock(productId: Long, previousStockPcs: Int) {
+        val safePrev = maxOf(0, previousStockPcs)
+        _uiState.update { state ->
+            val updated = state.items.map { item ->
+                if (item.product.id == productId) {
+                    val adjustedRemaining = minOf(item.remainingStock, safePrev)
+                    item.copy(previousStock = safePrev, remainingStock = adjustedRemaining)
+                } else item
+            }
+            state.copy(items = updated)
+        }
+    }
+
+    fun updateCustomerInfo(updatedCustomer: Customer) {
+        viewModelScope.launch {
+            repository.saveCustomer(updatedCustomer)
+            _uiState.update { it.copy(customer = updatedCustomer) }
         }
     }
 

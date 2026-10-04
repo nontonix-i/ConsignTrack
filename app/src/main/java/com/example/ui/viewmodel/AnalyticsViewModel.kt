@@ -2,12 +2,17 @@ package com.example.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.repository.AgentToolExecutionSummary
 import com.example.data.repository.ConsignmentRepository
 import com.example.domain.model.ReceiptData
 import com.example.domain.model.ReceiptItemData
+import com.example.util.BackupOperationResult
+import com.example.util.BackupRestoreManager
+import com.example.util.BackupStats
 import com.example.util.thermal.BluetoothPrinterManager
 import com.example.util.thermal.EscPosHelper
 import com.example.util.thermal.PairedPrinter
@@ -21,6 +26,7 @@ import kotlinx.coroutines.launch
 data class ChatMessage(
     val sender: String, // "USER" or "AGENT"
     val text: String,
+    val executedTools: List<AgentToolExecutionSummary> = emptyList(),
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -39,15 +45,22 @@ data class AnalyticsUiState(
     val messages: List<ChatMessage> = listOf(
         ChatMessage(
             sender = "AGENT",
-            text = "Halo! Saya **Asisten AI ConsignTrack**. Tanyakan performa penjualan, stok warung, atau analisis laba Anda kapan saja."
+            text = "Halo! Saya **AI Agent ConsignTrack** dengan fitur **Tool Calling**. Selain menganalisis bisnis, saya bisa **Menambah, Mengubah (Edit), & Menghapus** Warung, Produk, Stok Titipan, Transaksi, hingga Buku Kas secara langsung!"
         )
     ),
     val isAnalyzing: Boolean = false,
+    val agentModeEnabled: Boolean = true,
     val currentInput: String = "",
     val pairedPrinters: List<PairedPrinter> = emptyList(),
     val selectedPrinter: String? = null,
     val isPrintingTest: Boolean = false,
     val testPrintStatus: String? = null,
+    // Backup & Restore State
+    val isBackupInProgress: Boolean = false,
+    val backupStatusMessage: String? = null,
+    val backupStatusSuccess: Boolean = true,
+    val replaceOnRestore: Boolean = true,
+    val currentBackupStats: BackupStats = BackupStats(),
     // App Settings
     val themeMode: AppThemeMode = AppThemeMode.DARK,
     val language: AppLanguage = AppLanguage.ID,
@@ -71,12 +84,151 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         loadPrinters()
+        refreshBackupStats()
+    }
+
+    fun refreshBackupStats() {
+        viewModelScope.launch {
+            val stats = BackupRestoreManager.getCurrentDatabaseStats(getApplication(), db)
+            _uiState.update { it.copy(currentBackupStats = stats) }
+        }
+    }
+
+    fun setReplaceOnRestore(replace: Boolean) {
+        _uiState.update { it.copy(replaceOnRestore = replace) }
+    }
+
+    fun clearBackupStatus() {
+        _uiState.update { it.copy(backupStatusMessage = null) }
+    }
+
+    fun exportBackupToUri(targetUri: Uri, onComplete: ((BackupOperationResult) -> Unit)? = null) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isBackupInProgress = true,
+                    backupStatusMessage = "Membuat file Backup ZIP (Data + Foto)...",
+                    backupStatusSuccess = true
+                )
+            }
+            val result = BackupRestoreManager.exportBackupToUri(getApplication(), db, targetUri)
+            val stats = BackupRestoreManager.getCurrentDatabaseStats(getApplication(), db)
+            _uiState.update {
+                it.copy(
+                    isBackupInProgress = false,
+                    backupStatusMessage = result.message,
+                    backupStatusSuccess = result.success,
+                    currentBackupStats = stats
+                )
+            }
+            onComplete?.invoke(result)
+        }
+    }
+
+    fun shareBackupZip() {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isBackupInProgress = true,
+                    backupStatusMessage = "Menyiapkan file Backup ZIP untuk dibagikan...",
+                    backupStatusSuccess = true
+                )
+            }
+            val context = getApplication<Application>()
+            val result = BackupRestoreManager.createShareableBackupZip(context, db)
+            val stats = BackupRestoreManager.getCurrentDatabaseStats(context, db)
+            _uiState.update {
+                it.copy(
+                    isBackupInProgress = false,
+                    backupStatusMessage = result.message,
+                    backupStatusSuccess = result.success,
+                    currentBackupStats = stats
+                )
+            }
+            if (result.success && result.shareFile != null) {
+                runCatching {
+                    BackupRestoreManager.launchShareBackupIntent(context, result.shareFile)
+                }.onFailure { err ->
+                    _uiState.update {
+                        it.copy(
+                            backupStatusMessage = "Gagal membuka menu bagikan: ${err.localizedMessage ?: err.message}",
+                            backupStatusSuccess = false
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun importBackupFromUri(sourceUri: Uri, onComplete: ((BackupOperationResult) -> Unit)? = null) {
+        viewModelScope.launch {
+            val replaceExisting = _uiState.value.replaceOnRestore
+            _uiState.update {
+                it.copy(
+                    isBackupInProgress = true,
+                    backupStatusMessage = "Mengimpor & memulihkan data serta foto dari ZIP...",
+                    backupStatusSuccess = true
+                )
+            }
+            val context = getApplication<Application>()
+            val result = BackupRestoreManager.importBackupFromUri(
+                context = context,
+                db = db,
+                sourceUri = sourceUri,
+                replaceExisting = replaceExisting
+            )
+            val reloadedPrefs = loadInitialState()
+            val stats = BackupRestoreManager.getCurrentDatabaseStats(context, db)
+            _uiState.update { current ->
+                current.copy(
+                    isBackupInProgress = false,
+                    backupStatusMessage = result.message,
+                    backupStatusSuccess = result.success,
+                    currentBackupStats = stats,
+                    themeMode = reloadedPrefs.themeMode,
+                    language = reloadedPrefs.language,
+                    showFloatingAiChat = reloadedPrefs.showFloatingAiChat,
+                    agentModeEnabled = reloadedPrefs.agentModeEnabled,
+                    defaultPaper80mm = reloadedPrefs.defaultPaper80mm,
+                    autoSortNearestGps = reloadedPrefs.autoSortNearestGps,
+                    businessName = reloadedPrefs.businessName,
+                    businessAddress = reloadedPrefs.businessAddress,
+                    businessPhone = reloadedPrefs.businessPhone
+                )
+            }
+            onComplete?.invoke(result)
+        }
+    }
+
+    fun clearAllPreproductionData(onComplete: ((BackupOperationResult) -> Unit)? = null) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isBackupInProgress = true,
+                    backupStatusMessage = "Menghapus seluruh data & foto...",
+                    backupStatusSuccess = true
+                )
+            }
+            val context = getApplication<Application>()
+            val result = BackupRestoreManager.clearAllDataAndPhotos(context, db)
+            val stats = BackupRestoreManager.getCurrentDatabaseStats(context, db)
+            _uiState.update {
+                it.copy(
+                    isBackupInProgress = false,
+                    backupStatusMessage = result.message,
+                    backupStatusSuccess = result.success,
+                    currentBackupStats = stats
+                )
+            }
+            onComplete?.invoke(result)
+        }
     }
 
     private fun loadInitialState(): AnalyticsUiState {
         val themeStr = prefs.getString("theme_mode", AppThemeMode.DARK.name) ?: AppThemeMode.DARK.name
         val langStr = prefs.getString("language", AppLanguage.ID.name) ?: AppLanguage.ID.name
         val showFloating = prefs.getBoolean("show_floating_ai", true)
+        val agentEnabled = prefs.getBoolean("agent_mode_enabled", true)
         val paper80mm = prefs.getBoolean("default_paper_80mm", false)
         val autoGps = prefs.getBoolean("auto_sort_gps", true)
         val bizName = prefs.getString("business_name", "CONSIGNTRACK DISTRIBUSI") ?: "CONSIGNTRACK DISTRIBUSI"
@@ -87,13 +239,14 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
         val language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(AppLanguage.ID)
 
         val initialGreeting = if (language == AppLanguage.EN) {
-            "Hello! I am your **ConsignTrack AI Assistant**. Ask me about store sales, consigned stock, or profit analysis anytime."
+            "Hello! I am your **ConsignTrack AI Agent** with **Tool Calling** enabled. I can analyze your business or directly **Add, Edit, & Erase** Stores, Products, Consigned Stock, Transactions, and Financial Records!"
         } else {
-            "Halo! Saya **Asisten AI ConsignTrack**. Tanyakan performa penjualan, stok warung, atau analisis laba Anda kapan saja."
+            "Halo! Saya **AI Agent ConsignTrack** dengan fitur **Tool Calling**. Selain menganalisis bisnis, saya bisa **Menambah, Mengubah (Edit), & Menghapus** Warung, Produk, Stok Titipan, Transaksi, hingga Buku Kas secara langsung!"
         }
 
         return AnalyticsUiState(
             messages = listOf(ChatMessage(sender = "AGENT", text = initialGreeting)),
+            agentModeEnabled = agentEnabled,
             themeMode = themeMode,
             language = language,
             showFloatingAiChat = showFloating,
@@ -103,6 +256,11 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             businessAddress = bizAddr,
             businessPhone = bizPhone
         )
+    }
+
+    fun setAgentModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("agent_mode_enabled", enabled).apply()
+        _uiState.update { it.copy(agentModeEnabled = enabled) }
     }
 
     fun setThemeMode(mode: AppThemeMode) {
@@ -192,8 +350,24 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         viewModelScope.launch {
-            val answer = repository.askLocalAgent(query)
-            val agentMsg = ChatMessage(sender = "AGENT", text = answer)
+            val currentState = _uiState.value
+            val turnResponse = repository.askAgentWithTools(
+                query = query,
+                enableTools = currentState.agentModeEnabled,
+                currentBusinessProfile = Triple(
+                    currentState.businessName,
+                    currentState.businessAddress,
+                    currentState.businessPhone
+                )
+            )
+            turnResponse.updatedBusinessProfile?.let { (newName, newAddr, newPhone) ->
+                updateBusinessProfile(newName, newAddr, newPhone)
+            }
+            val agentMsg = ChatMessage(
+                sender = "AGENT",
+                text = turnResponse.replyMarkdown,
+                executedTools = turnResponse.executedTools
+            )
             _uiState.update {
                 it.copy(
                     messages = it.messages + agentMsg,

@@ -5,14 +5,44 @@ import com.example.data.local.entity.Product
 import com.example.data.local.entity.TransactionDetail
 import com.example.data.local.entity.TransactionHeader
 
+data class CustomerStockItemSummary(
+    val productId: Long,
+    val productName: String,
+    val unitSmall: String,
+    val unitBig: String,
+    val piecesPerPack: Int,
+    val quantityPieces: Int,
+    val formattedStock: String,
+    val catalogPricePack: Double,
+    val customPricePack: Double?,
+    val effectivePricePack: Double,
+    val effectivePriceUnit: Double
+) {
+    val isCustomPrice: Boolean
+        get() = customPricePack != null && customPricePack > 0.0 && customPricePack != catalogPricePack
+
+    val hasCustomPrice: Boolean
+        get() = isCustomPrice
+
+    val effectivePriceSmall: Double
+        get() = effectivePriceUnit
+}
+
 data class CustomerWithStatus(
     val customer: Customer,
     val totalActiveStock: Int = 0,
+    val stockItems: List<CustomerStockItemSummary> = emptyList(),
     val hasVisitedToday: Boolean = false,
     val lastVisitDate: Long? = null,
     val lastTransactionAmount: Double? = null,
     val distanceMeters: Float? = null
 ) {
+    val customPricesByProduct: Map<Long, Double>
+        get() = stockItems.mapNotNull { item ->
+            val cp = item.customPricePack
+            if (cp != null && cp > 0.0 && item.isCustomPrice) item.productId to cp else null
+        }.toMap()
+
     val formattedDistance: String
         get() = when {
             distanceMeters == null -> ""
@@ -23,13 +53,32 @@ data class CustomerWithStatus(
 
 data class ReconciliationItem(
     val product: Product,
-    val previousStock: Int,                 // in pieces (pcs)
+    val previousStock: Int,                 // in pieces (pcs) - Titip minggu/kunjungan lalu
     val remainingStock: Int = 0,            // in pieces (pcs) - dihitung saat cek toples/rak warung
     val isAutoSwapReturned: Boolean = true, // Default: sisa ditarik & diganti baru
     val manualReturnedQuantity: Int = 0,    // in pieces jika sisa tidak ditarik semua
     val addedPacks: Int = if (product.pieces_per_pack > 0) previousStock / product.pieces_per_pack else 0, // Ganti baru dalam satuan PACK
-    val addedPiecesExtra: Int = 0           // Tambahan eceran pcs jika ada
+    val addedPiecesExtra: Int = 0,          // Tambahan eceran pcs jika ada
+    val customPricePack: Double? = null     // Harga khusus warung per Pack (null = harga standar katalog)
 ) {
+    // Harga efektif per Pack untuk warung ini
+    val effectivePricePack: Double
+        get() = if (customPricePack != null && customPricePack > 0.0) customPricePack else product.selling_price_pack
+
+    // Harga efektif per Pcs (satuan kecil) untuk warung ini
+    val effectivePriceUnit: Double
+        get() = if (customPricePack != null && customPricePack > 0.0) {
+            if (product.pieces_per_pack > 0) customPricePack / product.pieces_per_pack else customPricePack
+        } else {
+            product.selling_price
+        }
+
+    val isCustomPrice: Boolean
+        get() = customPricePack != null && customPricePack > 0.0 && customPricePack != product.selling_price_pack
+
+    val hasCustomPrice: Boolean
+        get() = isCustomPrice
+
     // Sisa yang ditarik dari warung
     val returnedQuantity: Int
         get() = if (isAutoSwapReturned) remainingStock else manualReturnedQuantity
@@ -43,9 +92,9 @@ data class ReconciliationItem(
     val soldQuantity: Int
         get() = maxOf(0, previousStock - remainingStock)
 
-    // Subtotal yang WAJIB DIBAYAR warung HANYA yang laku! Sisa tidak kehitung bayaran!
+    // Subtotal yang WAJIB DIBAYAR warung HANYA yang laku (menggunakan harga khusus warung jika ada)!
     val subtotal: Double
-        get() = soldQuantity * product.selling_price
+        get() = soldQuantity * effectivePriceUnit
 
     // HPP / Biaya pokok barang yang laku
     val costTotal: Double

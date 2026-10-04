@@ -42,4 +42,10 @@ interface ConsignmentStockDao {
 
     @Query("DELETE FROM consignment_stocks WHERE customer_id = :customerId AND product_id = :productId")
     suspend fun deleteStock(customerId: Long, productId: Long)
+
+    @Query("DELETE FROM consignment_stocks WHERE product_id = :productId")
+    suspend fun deleteStocksForProduct(productId: Long)
+
+    @Query("DELETE FROM consignment_stocks")
+    suspend fun deleteAllStocks()
 }

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
@@ -112,6 +113,7 @@ fun ReconciliationScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPhotoChooser by remember { mutableStateOf(false) }
+    var showEditWarungInfoDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(customerId) {
         viewModel.loadCustomer(customerId)
@@ -205,108 +207,18 @@ fun ReconciliationScreen(
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Customer Header Info Card
+                // Combined Minimalist Header Bar: Warung Info + Foto Rak + Tambah Produk
                 item {
-                    CustomerHeaderCard(
-                        customerName = uiState.customer?.name ?: "",
+                    MinimalistVisitHeaderBar(
                         routeDay = uiState.customer?.route_day ?: "Senin",
                         routeOrder = uiState.customer?.route_order ?: 1,
                         address = uiState.customer?.address ?: "",
-                        phone = uiState.customer?.phone ?: ""
-                    )
-                }
-
-                // Visit & Shelf Photo Card
-                item {
-                    VisitPhotoCard(
                         photoUri = uiState.visitPhotoUri,
+                        itemCount = uiState.items.size,
+                        onEditCustomer = { showEditWarungInfoDialog = true },
                         onTakePhoto = { showPhotoChooser = true },
-                        onDeletePhoto = { viewModel.updateVisitPhoto(null) }
+                        onAddProduct = { viewModel.setShowAddProductDialog(true) }
                     )
-                }
-
-                // Section Title: Produk Dititipkan
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "Daftar Produk",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimaryDark
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "(${uiState.items.size})",
-                                fontSize = 12.sp,
-                                color = SupabaseGreen
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Button Performa Toko
-                            Surface(
-                                modifier = Modifier
-                                    .clickable { viewModel.setShowPerformanceDialog(true) }
-                                    .border(1.dp, AmberWarning.copy(alpha = 0.4f), RoundedCornerShape(6.dp)),
-                                shape = RoundedCornerShape(6.dp),
-                                color = AmberWarning.copy(alpha = 0.12f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.Insights,
-                                        contentDescription = null,
-                                        tint = AmberWarning,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Riwayat",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = AmberWarning
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(6.dp))
-
-                            // Button + Tambah Produk
-                            Surface(
-                                modifier = Modifier
-                                    .clickable { viewModel.setShowAddProductDialog(true) }
-                                    .border(1.dp, SupabaseGreen.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
-                                shape = RoundedCornerShape(6.dp),
-                                color = SupabaseGreen.copy(alpha = 0.15f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = SupabaseGreen,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text(
-                                        text = "+ Produk",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = SupabaseGreen
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
 
                 // Empty state if outlet has no consignment products yet
@@ -322,40 +234,34 @@ fun ReconciliationScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                                    .padding(horizontal = 16.dp, vertical = 18.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Icon(
                                     Icons.Default.Inventory2,
                                     contentDescription = null,
                                     tint = TextMutedDark,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(30.dp)
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = "Belum Ada Produk Dititipkan",
-                                    fontSize = 13.5.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimaryDark
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Warung ini belum memiliki produk konsinyasi. Silakan tambahkan produk yang ingin dititip ke warung ini.",
-                                    fontSize = 11.5.sp,
-                                    color = TextSecondaryDark,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Button(
                                     onClick = { viewModel.setShowAddProductDialog(true) },
                                     colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen),
                                     shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                    modifier = Modifier.height(34.dp)
                                 ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp), tint = Color(0xFF042114))
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF042114))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "+ Tambah Produk Pertama",
+                                        text = "Tambah Produk",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF042114)
@@ -370,6 +276,8 @@ fun ReconciliationScreen(
                 items(uiState.items, key = { it.product.id }) { item ->
                     ReconciliationItemCard(
                         item = item,
+                        onPreviousStockChanged = { prevQty -> viewModel.updatePreviousStock(item.product.id, prevQty) },
+                        onCustomPricePackChanged = { customPack -> viewModel.updateCustomPricePack(item.product.id, customPack) },
                         onRemainingChanged = { qty -> viewModel.updateRemainingStock(item.product.id, qty) },
                         onAutoSwapChanged = { isAutoSwap -> viewModel.updateAutoSwapReturned(item.product.id, isAutoSwap) },
                         onAddedPacksChanged = { packs -> viewModel.updateAddedPacks(item.product.id, packs) },
@@ -443,193 +351,255 @@ fun ReconciliationScreen(
         AddProductToOutletDialog(
             catalogProducts = uiState.catalogProducts,
             existingItemIds = uiState.items.map { it.product.id }.toSet(),
-            onAddProduct = { product, packs ->
-                viewModel.addProductToOutlet(product, packs)
+            onAddProduct = { product, packs, customPricePack ->
+                viewModel.addProductToOutlet(product, packs, customPricePack)
             },
             onDismiss = { viewModel.setShowAddProductDialog(false) }
+        )
+    }
+
+    // Quick Edit Warung Info Dialog from Visit Screen
+    if (showEditWarungInfoDialog && uiState.customer != null) {
+        val currentCust = uiState.customer!!
+        var editName by remember(currentCust) { mutableStateOf(currentCust.name) }
+        var editAddress by remember(currentCust) { mutableStateOf(currentCust.address) }
+        var editPhone by remember(currentCust) { mutableStateOf(currentCust.phone) }
+        var editRouteDay by remember(currentCust) { mutableStateOf(currentCust.route_day) }
+        var editRouteOrder by remember(currentCust) { mutableStateOf(currentCust.route_order.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showEditWarungInfoDialog = false },
+            containerColor = CharcoalSurface,
+            title = {
+                Text(
+                    text = "Edit Info Warung",
+                    fontSize = 15.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryDark
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Nama Warung") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SupabaseGreen,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimaryDark,
+                            unfocusedTextColor = TextPrimaryDark
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = editRouteDay,
+                            onValueChange = { editRouteDay = it },
+                            label = { Text("Hari Rute") },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SupabaseGreen,
+                                unfocusedBorderColor = CharcoalBorder,
+                                focusedTextColor = TextPrimaryDark,
+                                unfocusedTextColor = TextPrimaryDark
+                            ),
+                            modifier = Modifier.weight(0.6f)
+                        )
+                        OutlinedTextField(
+                            value = editRouteOrder,
+                            onValueChange = { editRouteOrder = it.filter { ch -> ch.isDigit() } },
+                            label = { Text("Urutan") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SupabaseGreen,
+                                unfocusedBorderColor = CharcoalBorder,
+                                focusedTextColor = TextPrimaryDark,
+                                unfocusedTextColor = TextPrimaryDark
+                            ),
+                            modifier = Modifier.weight(0.4f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = editPhone,
+                            onValueChange = { editPhone = it },
+                            label = { Text("No. WA") },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SupabaseGreen,
+                                unfocusedBorderColor = CharcoalBorder,
+                                focusedTextColor = TextPrimaryDark,
+                                unfocusedTextColor = TextPrimaryDark
+                            ),
+                            modifier = Modifier.weight(0.48f)
+                        )
+                        OutlinedTextField(
+                            value = editAddress,
+                            onValueChange = { editAddress = it },
+                            label = { Text("Alamat") },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SupabaseGreen,
+                                unfocusedBorderColor = CharcoalBorder,
+                                focusedTextColor = TextPrimaryDark,
+                                unfocusedTextColor = TextPrimaryDark
+                            ),
+                            modifier = Modifier.weight(0.52f)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editName.isNotBlank()) {
+                            viewModel.updateCustomerInfo(
+                                currentCust.copy(
+                                    name = editName.trim(),
+                                    address = editAddress.trim(),
+                                    phone = editPhone.trim(),
+                                    route_day = editRouteDay.trim().ifBlank { currentCust.route_day },
+                                    route_order = editRouteOrder.toIntOrNull() ?: currentCust.route_order
+                                )
+                            )
+                            showEditWarungInfoDialog = false
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114))
+                ) {
+                    Text("Simpan", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditWarungInfoDialog = false }) {
+                    Text("Batal", color = TextSecondaryDark)
+                }
+            }
         )
     }
 }
 
 @Composable
-private fun VisitPhotoCard(
+private fun MinimalistVisitHeaderBar(
+    routeDay: String,
+    routeOrder: Int,
+    address: String,
     photoUri: String?,
+    itemCount: Int,
+    onEditCustomer: () -> Unit,
     onTakePhoto: () -> Unit,
-    onDeletePhoto: () -> Unit
+    onAddProduct: () -> Unit
 ) {
-    if (photoUri == null) {
-        Surface(
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CharcoalSurface, RoundedCornerShape(10.dp))
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left: Route Badge + Address + Edit Tap
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onTakePhoto() }
-                .border(1.dp, CharcoalBorder, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp),
-            color = CharcoalSurfaceElevated
+                .weight(1f)
+                .clickable { onEditCustomer() },
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .background(SupabaseGreen.copy(alpha = 0.15f), RoundedCornerShape(5.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "#$routeOrder • $routeDay",
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SupabaseGreen
+                )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = address.ifBlank { "Info Warung" },
+                fontSize = 11.5.sp,
+                color = TextSecondaryDark,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = "Edit Info",
+                tint = TextMutedDark,
+                modifier = Modifier.size(12.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Right: Compact Action Pills (Foto Rak & + Produk)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Foto Rak Chip
+            Box(
+                modifier = Modifier
+                    .background(
+                        if (photoUri != null) SupabaseGreen.copy(alpha = 0.15f) else CharcoalSurfaceElevated,
+                        RoundedCornerShape(6.dp)
+                    )
+                    .border(
+                        1.dp,
+                        if (photoUri != null) SupabaseGreen.copy(alpha = 0.4f) else CharcoalBorder,
+                        RoundedCornerShape(6.dp)
+                    )
+                    .clickable { onTakePhoto() }
+                    .padding(horizontal = 7.dp, vertical = 4.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.CameraAlt,
+                        contentDescription = "Foto Rak",
+                        tint = if (photoUri != null) SupabaseGreen else TextSecondaryDark,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (photoUri != null) "Foto ✓" else "Foto",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (photoUri != null) SupabaseGreen else TextSecondaryDark
+                    )
+                }
+            }
+
+            // + Produk Chip
+            Box(
+                modifier = Modifier
+                    .background(SupabaseGreen.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                    .border(1.dp, SupabaseGreen.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                    .clickable { onAddProduct() }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Add,
                         contentDescription = null,
                         tint = SupabaseGreen,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
-                        text = "Foto Rak / Toko",
-                        fontSize = 12.sp,
-                        color = TextSecondaryDark
-                    )
-                }
-                Text(
-                    text = "+ Ambil Foto",
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = SupabaseGreen
-                )
-            }
-        }
-    } else {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CharcoalBorder, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp),
-            color = CharcoalSurfaceElevated
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onTakePhoto() }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .border(1.dp, CharcoalBorder, RoundedCornerShape(6.dp))
-                    ) {
-                        AsyncImage(
-                            model = photoUri,
-                            contentDescription = "Foto Rak Toko",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Foto Rak Terlampir",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = SupabaseGreen
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Ganti",
-                        fontSize = 11.5.sp,
-                        color = TextSecondaryDark,
-                        modifier = Modifier
-                            .clickable { onTakePhoto() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                    Text(
-                        text = "Hapus",
-                        fontSize = 11.5.sp,
-                        color = RoseError,
-                        modifier = Modifier
-                            .clickable { onDeletePhoto() }
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CustomerHeaderCard(
-    customerName: String,
-    routeDay: String,
-    routeOrder: Int,
-    address: String,
-    phone: String
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, CharcoalBorder, RoundedCornerShape(10.dp)),
-        colors = CardDefaults.cardColors(containerColor = CharcoalSurface),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = customerName,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (address.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = address,
-                        fontSize = 11.5.sp,
-                        color = TextSecondaryDark,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .background(SupabaseGreen.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
-                        .border(1.dp, SupabaseGreen.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = routeDay.uppercase(),
-                        fontSize = 10.sp,
+                        text = "Produk ($itemCount)",
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = SupabaseGreen
-                    )
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .background(CharcoalSurfaceElevated, RoundedCornerShape(6.dp))
-                        .border(1.dp, CharcoalBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "#$routeOrder",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryDark
                     )
                 }
             }
@@ -640,6 +610,8 @@ private fun CustomerHeaderCard(
 @Composable
 private fun ReconciliationItemCard(
     item: ReconciliationItem,
+    onPreviousStockChanged: (Int) -> Unit,
+    onCustomPricePackChanged: (Double?) -> Unit,
     onRemainingChanged: (Int) -> Unit,
     onAutoSwapChanged: (Boolean) -> Unit,
     onAddedPacksChanged: (Int) -> Unit,
@@ -648,6 +620,7 @@ private fun ReconciliationItemCard(
 ) {
     val p = item.product
     var showDirectInputFor by remember { mutableStateOf<String?>(null) }
+    var showPriceEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Card(
@@ -660,18 +633,15 @@ private fun ReconciliationItemCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 7.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
-            // Row 1: Nama Produk, Stok Lalu, dan Ringkasan Terjual/Tagihan
+            // ROW 1: Nama Produk + Chip Harga Warung + Chip Titip Lalu (Left) | Subtotal & Laku (Right)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = p.name,
                         fontSize = 13.5.sp,
@@ -680,34 +650,76 @@ private fun ReconciliationItemCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Lalu: ${p.formatPackAndPieces(item.previousStock)}",
-                        fontSize = 10.5.sp,
-                        color = TextSecondaryDark
-                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Clickable Price Pill (Warung Custom or Standard)
+                        Row(
+                            modifier = Modifier
+                                .background(
+                                    if (item.hasCustomPrice) AmberWarning.copy(alpha = 0.14f) else CharcoalSurfaceElevated,
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .clickable { showPriceEditDialog = true }
+                                .padding(horizontal = 5.dp, vertical = 1.5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Rp %,.0f/%s".format(item.effectivePricePack, p.unit_big),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (item.hasCustomPrice) AmberWarning else TextSecondaryDark
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Ubah Harga",
+                                tint = if (item.hasCustomPrice) AmberWarning else TextMutedDark,
+                                modifier = Modifier.size(9.dp)
+                            )
+                        }
+
+                        // Clickable Titip Lalu Pill
+                        Row(
+                            modifier = Modifier
+                                .background(CharcoalSurfaceElevated, RoundedCornerShape(4.dp))
+                                .clickable { showDirectInputFor = "lalu" }
+                                .padding(horizontal = 5.dp, vertical = 1.5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Lalu: ${p.formatPackAndPieces(item.previousStock)}",
+                                fontSize = 10.sp,
+                                color = TextSecondaryDark
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit Lalu",
+                                tint = SupabaseGreen,
+                                modifier = Modifier.size(9.dp)
+                            )
+                        }
+                    }
                 }
 
+                // Right: Laku & Subtotal + Remove
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Terjual: ${item.soldQuantity}",
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (item.soldQuantity > 0) SupabaseGreen else TextSecondaryDark
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = "•",
-                        fontSize = 9.sp,
-                        color = TextMutedDark
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = "Rp %,.0f".format(item.subtotal),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (item.subtotal > 0) SupabaseGreen else TextMutedDark
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Rp %,.0f".format(item.subtotal),
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (item.subtotal > 0) SupabaseGreen else TextMutedDark
+                        )
+                        Text(
+                            text = "Laku ${item.soldQuantity} ${p.unit_small}",
+                            fontSize = 10.sp,
+                            color = if (item.soldQuantity > 0) SupabaseGreen else TextMutedDark
+                        )
+                    }
                     Spacer(modifier = Modifier.width(4.dp))
                     IconButton(
                         onClick = { showDeleteConfirm = true },
@@ -715,7 +727,7 @@ private fun ReconciliationItemCard(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Hapus Produk dari Warung",
+                            contentDescription = "Hapus",
                             tint = TextMutedDark,
                             modifier = Modifier.size(13.dp)
                         )
@@ -723,9 +735,9 @@ private fun ReconciliationItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(7.dp))
 
-            // Row 2: Minimalist Inline Controls
+            // ROW 2: Minimalist Inline Controls (Sisa, Titip Baru, Tukar)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -743,13 +755,12 @@ private fun ReconciliationItemCard(
                         text = "Sisa:",
                         fontSize = 11.sp,
                         color = TextSecondaryDark,
-                        modifier = Modifier.padding(start = 2.dp, end = 3.dp)
+                        modifier = Modifier.padding(start = 3.dp, end = 3.dp)
                     )
                     Box(
                         modifier = Modifier
                             .size(24.dp)
                             .background(CharcoalSurface, RoundedCornerShape(4.dp))
-                            .border(0.5.dp, CharcoalBorder, RoundedCornerShape(4.dp))
                             .clickable { if (item.remainingStock > 0) onRemainingChanged(item.remainingStock - 1) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -759,11 +770,11 @@ private fun ReconciliationItemCard(
                     Box(
                         modifier = Modifier
                             .clickable { showDirectInputFor = "sisa" }
-                            .padding(horizontal = 5.dp),
+                            .padding(horizontal = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "${item.remainingStock} ${p.unit_small}",
+                            text = "${item.remainingStock}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF38BDF8)
@@ -774,7 +785,6 @@ private fun ReconciliationItemCard(
                         modifier = Modifier
                             .size(24.dp)
                             .background(CharcoalSurface, RoundedCornerShape(4.dp))
-                            .border(0.5.dp, CharcoalBorder, RoundedCornerShape(4.dp))
                             .clickable { onRemainingChanged(item.remainingStock + 1) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -794,13 +804,12 @@ private fun ReconciliationItemCard(
                         text = "Titip:",
                         fontSize = 11.sp,
                         color = TextSecondaryDark,
-                        modifier = Modifier.padding(start = 2.dp, end = 3.dp)
+                        modifier = Modifier.padding(start = 3.dp, end = 3.dp)
                     )
                     Box(
                         modifier = Modifier
                             .size(24.dp)
                             .background(CharcoalSurface, RoundedCornerShape(4.dp))
-                            .border(0.5.dp, CharcoalBorder, RoundedCornerShape(4.dp))
                             .clickable { if (item.addedPacks > 0) onAddedPacksChanged(item.addedPacks - 1) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -810,7 +819,7 @@ private fun ReconciliationItemCard(
                     Box(
                         modifier = Modifier
                             .clickable { showDirectInputFor = "titip" }
-                            .padding(horizontal = 5.dp),
+                            .padding(horizontal = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -825,7 +834,6 @@ private fun ReconciliationItemCard(
                         modifier = Modifier
                             .size(24.dp)
                             .background(CharcoalSurface, RoundedCornerShape(4.dp))
-                            .border(0.5.dp, CharcoalBorder, RoundedCornerShape(4.dp))
                             .clickable { onAddedPacksChanged(item.addedPacks + 1) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -869,24 +877,34 @@ private fun ReconciliationItemCard(
     }
 
     if (showDirectInputFor != null) {
-        val isSisa = showDirectInputFor == "sisa"
-        val currVal = if (isSisa) item.remainingStock else item.addedPacks
-        val unit = if (isSisa) p.unit_small else p.unit_big
-        var inputStr by remember { mutableStateOf(currVal.toString()) }
+        val mode = showDirectInputFor
+        val isSisa = mode == "sisa"
+        val isLalu = mode == "lalu"
+        val currVal = when {
+            isSisa -> item.remainingStock
+            isLalu -> item.previousStock
+            else -> item.addedPacks
+        }
+        val unit = if (isSisa || isLalu) p.unit_small else p.unit_big
+        var inputStr by remember(mode) { mutableStateOf(currVal.toString()) }
 
         AlertDialog(
             onDismissRequest = { showDirectInputFor = null },
             containerColor = CharcoalSurface,
             title = {
                 Text(
-                    text = if (isSisa) "Input Sisa (${p.name})" else "Input Titip Baru (${p.name})",
+                    text = when {
+                        isSisa -> "Sisa • ${p.name}"
+                        isLalu -> "Titip Lalu • ${p.name}"
+                        else -> "Titip Baru • ${p.name}"
+                    },
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = inputStr,
                         onValueChange = { inputStr = it.filter { ch -> ch.isDigit() } },
@@ -906,16 +924,29 @@ private fun ReconciliationItemCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val quickList = if (isSisa) listOf(0, 1, 2, 5, item.previousStock) else listOf(0, 1, 2, 3, 5)
+                        val quickList = when {
+                            isSisa -> listOf(0, 1, 2, 5, item.previousStock)
+                            isLalu -> listOf(
+                                0,
+                                p.pieces_per_pack,
+                                p.pieces_per_pack * 2,
+                                p.pieces_per_pack * 3
+                            )
+                            else -> listOf(0, 1, 2, 3, 5)
+                        }
                         quickList.distinct().forEach { qVal ->
                             Box(
                                 modifier = Modifier
-                                    .background(CharcoalSurfaceElevated, RoundedCornerShape(4.dp))
-                                    .border(1.dp, CharcoalBorder, RoundedCornerShape(4.dp))
+                                    .background(CharcoalSurfaceElevated, RoundedCornerShape(6.dp))
+                                    .border(1.dp, CharcoalBorder, RoundedCornerShape(6.dp))
                                     .clickable { inputStr = qVal.toString() }
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text("$qVal", fontSize = 11.5.sp, color = SupabaseGreen)
+                                Text(
+                                    text = if (isLalu && qVal > 0) "${qVal / maxOf(1, p.pieces_per_pack)}${p.unit_big.take(1)} ($qVal)" else "$qVal",
+                                    fontSize = 11.sp,
+                                    color = SupabaseGreen
+                                )
                             }
                         }
                     }
@@ -925,17 +956,134 @@ private fun ReconciliationItemCard(
                 Button(
                     onClick = {
                         val num = inputStr.toIntOrNull() ?: 0
-                        if (isSisa) onRemainingChanged(maxOf(0, num)) else onAddedPacksChanged(maxOf(0, num))
+                        when {
+                            isSisa -> onRemainingChanged(maxOf(0, num))
+                            isLalu -> onPreviousStockChanged(maxOf(0, num))
+                            else -> onAddedPacksChanged(maxOf(0, num))
+                        }
                         showDirectInputFor = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Terapkan")
+                    Text("Simpan", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDirectInputFor = null }) {
+                    Text("Batal", color = TextSecondaryDark)
+                }
+            }
+        )
+    }
+
+    if (showPriceEditDialog) {
+        var packPriceStr by remember { mutableStateOf("%.0f".format(item.effectivePricePack)) }
+        var unitPriceStr by remember { mutableStateOf("%.0f".format(item.effectivePriceUnit)) }
+        val pcsPerPack = maxOf(1, p.pieces_per_pack)
+
+        AlertDialog(
+            onDismissRequest = { showPriceEditDialog = false },
+            containerColor = CharcoalSurface,
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Harga Warung • ${p.name}",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryDark,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "Standar: Rp %,.0f/%s".format(p.selling_price_pack, p.unit_big),
+                            fontSize = 11.sp,
+                            color = TextSecondaryDark
+                        )
+                    }
+                    Text(
+                        text = "Reset",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SupabaseGreen,
+                        modifier = Modifier
+                            .clickable {
+                                packPriceStr = "%.0f".format(p.selling_price_pack)
+                                unitPriceStr = "%.0f".format(p.selling_price)
+                            }
+                            .padding(4.dp)
+                    )
+                }
+            },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = packPriceStr,
+                        onValueChange = { str ->
+                            val clean = str.filter { it.isDigit() }
+                            packPriceStr = clean
+                            val packVal = clean.toDoubleOrNull() ?: 0.0
+                            unitPriceStr = "%.0f".format(packVal / pcsPerPack)
+                        },
+                        label = { Text("Per ${p.unit_big} (Rp)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AmberWarning,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimaryDark,
+                            unfocusedTextColor = TextPrimaryDark
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    OutlinedTextField(
+                        value = unitPriceStr,
+                        onValueChange = { str ->
+                            val clean = str.filter { it.isDigit() }
+                            unitPriceStr = clean
+                            val unitVal = clean.toDoubleOrNull() ?: 0.0
+                            packPriceStr = "%.0f".format(unitVal * pcsPerPack)
+                        },
+                        label = { Text("Per ${p.unit_small} (Rp)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AmberWarning,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimaryDark,
+                            unfocusedTextColor = TextPrimaryDark
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val newPackPrice = packPriceStr.toDoubleOrNull()
+                        if (newPackPrice == null || kotlin.math.abs(newPackPrice - p.selling_price_pack) < 0.5) {
+                            onCustomPricePackChanged(null)
+                        } else {
+                            onCustomPricePackChanged(newPackPrice)
+                        }
+                        showPriceEditDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Simpan", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPriceEditDialog = false }) {
                     Text("Batal", color = TextSecondaryDark)
                 }
             }
@@ -947,11 +1095,11 @@ private fun ReconciliationItemCard(
             onDismissRequest = { showDeleteConfirm = false },
             containerColor = CharcoalSurface,
             title = {
-                Text("Hapus dari Outlet?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                Text("Hapus Produk?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
             },
             text = {
                 Text(
-                    "Hapus '${p.name}' dari daftar titipan warung ini? Stok titipan produk ini di warung ini akan direset.",
+                    "Hapus '${p.name}' dari daftar titipan warung ini?",
                     fontSize = 12.sp,
                     color = TextSecondaryDark
                 )
@@ -964,11 +1112,11 @@ private fun ReconciliationItemCard(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RoseError)
                 ) {
-                    Text("Hapus", fontSize = 12.sp, color = androidx.compose.ui.graphics.Color.White)
+                    Text("Hapus", fontSize = 12.sp, color = Color.White)
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDeleteConfirm = false }) {
+                TextButton(onClick = { showDeleteConfirm = false }) {
                     Text("Batal", fontSize = 12.sp, color = TextSecondaryDark)
                 }
             }
@@ -993,76 +1141,59 @@ private fun SettlementCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, CharcoalBorder, RoundedCornerShape(14.dp)),
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = CharcoalSurface),
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Pembayaran",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
-                color = SupabaseGreen
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Breakdown Rows
-            SummaryRow(label = "Barang Terjual", value = "$totalSoldQty Pcs", valueColor = SupabaseGreen)
-            if (totalReturned > 0) {
-                SummaryRow(label = "Sisa Ditarik", value = "$totalReturned Pcs", valueColor = RoseError)
-            }
-            if (totalAddedPacks > 0 || totalAddedQty > 0) {
-                SummaryRow(label = "Titipan Baru", value = "$totalAddedPacks Pack ($totalAddedQty Pcs)", valueColor = Color(0xFF38BDF8))
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                thickness = 1.dp,
-                color = CharcoalBorder
-            )
-
-            // Total Tagihan Besar
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Compact Top Summary Row: Terjual, Titip Baru, Retur, & Total Tagihan
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Total Tagihan",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimaryDark
-                )
+                Column {
+                    Text(
+                        text = "Total Tagihan",
+                        fontSize = 11.5.sp,
+                        color = TextSecondaryDark
+                    )
+                    Text(
+                        text = "Laku $totalSoldQty pcs • Titip +$totalAddedPacks pack" +
+                                (if (totalReturned > 0) " • Retur $totalReturned" else ""),
+                        fontSize = 10.5.sp,
+                        color = TextMutedDark
+                    )
+                }
                 Text(
                     text = "Rp %,.0f".format(totalSoldAmount),
-                    fontSize = 20.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     color = SupabaseGreen
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Input Uang Diterima
-            Text(
-                text = "Uang Diterima",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextSecondaryDark
-            )
-            Spacer(modifier = Modifier.height(6.dp))
+            // Uang Diterima + Quick Buttons
             OutlinedTextField(
                 value = if (amountPaid == 0.0) "" else "%.0f".format(amountPaid),
                 onValueChange = { str ->
                     val clean = str.filter { it.isDigit() }
-                    val dbl = clean.toDoubleOrNull() ?: 0.0
-                    onAmountPaidChanged(dbl)
+                    onAmountPaidChanged(clean.toDoubleOrNull() ?: 0.0)
                 },
+                label = { Text("Uang Diterima (Rp)") },
                 placeholder = { Text("0") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
+                trailingIcon = {
+                    TextButton(
+                        onClick = onSetExactAmount,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text("Uang Pas", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SupabaseGreen)
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = SupabaseGreen,
                     unfocusedBorderColor = CharcoalBorder,
@@ -1075,94 +1206,57 @@ private fun SettlementCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // Quick Amount Buttons
+            // Quick Amount Pills + Status Kembalian/Kurang in 1 row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = onSetExactAmount,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SupabaseGreen),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
-                ) {
-                    Text("Uang Pas", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    QuickChipButton(
+                        text = "+20 rb",
+                        onClick = { onAmountPaidChanged(amountPaid + 20000.0) }
+                    )
+                    QuickChipButton(
+                        text = "+50 rb",
+                        onClick = { onAmountPaidChanged(amountPaid + 50000.0) }
+                    )
+                    QuickChipButton(
+                        text = "+100 rb",
+                        onClick = { onAmountPaidChanged(amountPaid + 100000.0) }
+                    )
                 }
 
-                QuickChipButton(
-                    text = "+50 rb",
-                    onClick = { onAmountPaidChanged(amountPaid + 50000.0) },
-                    modifier = Modifier.weight(1f)
-                )
-                QuickChipButton(
-                    text = "+100 rb",
-                    onClick = { onAmountPaidChanged(amountPaid + 100000.0) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Change or Debt Status
-            if (amountPaid > 0) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            when {
-                                changeOrDebt == 0.0 -> SupabaseGreen.copy(alpha = 0.12f)
-                                changeOrDebt > 0 -> BlueInfo.copy(alpha = 0.12f)
-                                else -> AmberWarning.copy(alpha = 0.12f)
-                            },
-                            RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                if (amountPaid > 0) {
+                    val statusColor = when {
+                        changeOrDebt == 0.0 -> SupabaseGreen
+                        changeOrDebt > 0 -> BlueInfo
+                        else -> AmberWarning
+                    }
+                    val statusText = when {
+                        changeOrDebt == 0.0 -> "LUNAS"
+                        changeOrDebt > 0 -> "Kembali Rp %,.0f".format(changeOrDebt)
+                        else -> "Kurang Rp %,.0f".format(-changeOrDebt)
+                    }
                     Text(
-                        text = when {
-                            changeOrDebt == 0.0 -> "Status:"
-                            changeOrDebt > 0 -> "Kembalian:"
-                            else -> "Kurang:"
-                        },
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = when {
-                            changeOrDebt == 0.0 -> SupabaseGreen
-                            changeOrDebt > 0 -> BlueInfo
-                            else -> AmberWarning
-                        }
-                    )
-                    Text(
-                        text = when {
-                            changeOrDebt == 0.0 -> "LUNAS"
-                            changeOrDebt > 0 -> "Rp %,.0f".format(changeOrDebt)
-                            else -> "Rp %,.0f".format(-changeOrDebt)
-                        },
-                        fontSize = 13.sp,
+                        text = statusText,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = when {
-                            changeOrDebt == 0.0 -> SupabaseGreen
-                            changeOrDebt > 0 -> BlueInfo
-                            else -> AmberWarning
-                        }
+                        color = statusColor
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Notes
+            // Notes (Minimalist Single-line)
             OutlinedTextField(
                 value = notes,
                 onValueChange = onNotesChanged,
-                label = { Text("Catatan") },
-                maxLines = 2,
+                label = { Text("Catatan (Opsional)") },
+                singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = SupabaseGreen,
                     unfocusedBorderColor = CharcoalBorder,
@@ -1184,33 +1278,14 @@ private fun QuickChipButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimaryDark),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+    Box(
+        modifier = modifier
+            .background(CharcoalSurfaceElevated, RoundedCornerShape(6.dp))
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(6.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Text(text, fontSize = 11.5.sp)
-    }
-}
-
-@Composable
-private fun SummaryRow(
-    label: String,
-    value: String,
-    valueColor: Color = TextPrimaryDark
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, fontSize = 12.5.sp, color = TextSecondaryDark)
-        Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = valueColor)
+        Text(text, fontSize = 11.sp, color = TextPrimaryDark)
     }
 }
 
