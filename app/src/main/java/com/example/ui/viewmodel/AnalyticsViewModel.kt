@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.remote.OpenAiClient
 import com.example.data.repository.AgentToolExecutionSummary
 import com.example.data.repository.ConsignmentRepository
 import com.example.domain.model.ReceiptData
@@ -69,7 +70,12 @@ data class AnalyticsUiState(
     val autoSortNearestGps: Boolean = true,
     val businessName: String = "CONSIGNTRACK DISTRIBUSI",
     val businessAddress: String = "Sentra Makanan Ringan",
-    val businessPhone: String = "0812-9988-7766"
+    val businessPhone: String = "0812-9988-7766",
+    // AI API Configuration (In-App Settings instead of .env)
+    val aiBaseUrl: String = OpenAiClient.DEFAULT_BASE_URL,
+    val aiApiKey: String = OpenAiClient.DEFAULT_API_KEY,
+    val aiModelName: String = OpenAiClient.DEFAULT_MODEL,
+    val geminiApiKey: String = ""
 )
 
 class AnalyticsViewModel(application: Application) : AndroidViewModel(application) {
@@ -83,6 +89,7 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
     val uiState: StateFlow<AnalyticsUiState> = _uiState.asStateFlow()
 
     init {
+        OpenAiClient.syncFromPreferences(application)
         loadPrinters()
         refreshBackupStats()
     }
@@ -193,7 +200,11 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
                     autoSortNearestGps = reloadedPrefs.autoSortNearestGps,
                     businessName = reloadedPrefs.businessName,
                     businessAddress = reloadedPrefs.businessAddress,
-                    businessPhone = reloadedPrefs.businessPhone
+                    businessPhone = reloadedPrefs.businessPhone,
+                    aiBaseUrl = reloadedPrefs.aiBaseUrl,
+                    aiApiKey = reloadedPrefs.aiApiKey,
+                    aiModelName = reloadedPrefs.aiModelName,
+                    geminiApiKey = reloadedPrefs.geminiApiKey
                 )
             }
             onComplete?.invoke(result)
@@ -234,6 +245,17 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
         val bizName = prefs.getString("business_name", "CONSIGNTRACK DISTRIBUSI") ?: "CONSIGNTRACK DISTRIBUSI"
         val bizAddr = prefs.getString("business_address", "Sentra Makanan Ringan") ?: "Sentra Makanan Ringan"
         val bizPhone = prefs.getString("business_phone", "0812-9988-7766") ?: "0812-9988-7766"
+        val aiUrl = prefs.getString("ai_base_url", OpenAiClient.DEFAULT_BASE_URL) ?: OpenAiClient.DEFAULT_BASE_URL
+        val aiKey = prefs.getString("ai_api_key", OpenAiClient.DEFAULT_API_KEY) ?: OpenAiClient.DEFAULT_API_KEY
+        val aiModel = prefs.getString("ai_model_name", OpenAiClient.DEFAULT_MODEL) ?: OpenAiClient.DEFAULT_MODEL
+        val geminiKey = prefs.getString("gemini_api_key", "") ?: ""
+
+        OpenAiClient.updateConfig(
+            baseUrl = aiUrl,
+            apiKey = aiKey,
+            model = aiModel,
+            geminiApiKey = geminiKey
+        )
 
         val themeMode = runCatching { AppThemeMode.valueOf(themeStr) }.getOrDefault(AppThemeMode.DARK)
         val language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(AppLanguage.ID)
@@ -254,8 +276,47 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             autoSortNearestGps = autoGps,
             businessName = bizName,
             businessAddress = bizAddr,
-            businessPhone = bizPhone
+            businessPhone = bizPhone,
+            aiBaseUrl = OpenAiClient.normalizeBaseUrl(aiUrl),
+            aiApiKey = aiKey,
+            aiModelName = aiModel,
+            geminiApiKey = geminiKey
         )
+    }
+
+    fun updateAiApiConfig(
+        baseUrl: String,
+        apiKey: String,
+        modelName: String,
+        geminiKey: String
+    ) {
+        val cleanUrl = OpenAiClient.normalizeBaseUrl(baseUrl)
+        val cleanKey = apiKey.trim()
+        val cleanModel = modelName.trim().ifBlank { OpenAiClient.DEFAULT_MODEL }
+        val cleanGemini = geminiKey.trim()
+
+        prefs.edit()
+            .putString("ai_base_url", cleanUrl)
+            .putString("ai_api_key", cleanKey)
+            .putString("ai_model_name", cleanModel)
+            .putString("gemini_api_key", cleanGemini)
+            .apply()
+
+        OpenAiClient.updateConfig(
+            baseUrl = cleanUrl,
+            apiKey = cleanKey,
+            model = cleanModel,
+            geminiApiKey = cleanGemini
+        )
+
+        _uiState.update {
+            it.copy(
+                aiBaseUrl = cleanUrl,
+                aiApiKey = cleanKey,
+                aiModelName = cleanModel,
+                geminiApiKey = cleanGemini
+            )
+        }
     }
 
     fun setAgentModeEnabled(enabled: Boolean) {

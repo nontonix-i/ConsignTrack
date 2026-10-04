@@ -271,6 +271,10 @@ object BackupRestoreManager {
             put("agent_mode_enabled", prefs.getBoolean("agent_mode_enabled", true))
             put("default_paper_80mm", prefs.getBoolean("default_paper_80mm", false))
             put("auto_sort_gps", prefs.getBoolean("auto_sort_gps", true))
+            put("ai_base_url", prefs.getString("ai_base_url", com.example.data.remote.OpenAiClient.DEFAULT_BASE_URL) ?: com.example.data.remote.OpenAiClient.DEFAULT_BASE_URL)
+            put("ai_api_key", prefs.getString("ai_api_key", com.example.data.remote.OpenAiClient.DEFAULT_API_KEY) ?: com.example.data.remote.OpenAiClient.DEFAULT_API_KEY)
+            put("ai_model_name", prefs.getString("ai_model_name", com.example.data.remote.OpenAiClient.DEFAULT_MODEL) ?: com.example.data.remote.OpenAiClient.DEFAULT_MODEL)
+            put("gemini_api_key", prefs.getString("gemini_api_key", "") ?: "")
         }
         rootJson.put("settings", settingsJson)
 
@@ -511,7 +515,12 @@ object BackupRestoreManager {
                     if (s.has("agent_mode_enabled")) putBoolean("agent_mode_enabled", s.optBoolean("agent_mode_enabled", true))
                     if (s.has("default_paper_80mm")) putBoolean("default_paper_80mm", s.optBoolean("default_paper_80mm", false))
                     if (s.has("auto_sort_gps")) putBoolean("auto_sort_gps", s.optBoolean("auto_sort_gps", true))
+                    if (s.has("ai_base_url")) putString("ai_base_url", s.optString("ai_base_url", com.example.data.remote.OpenAiClient.DEFAULT_BASE_URL))
+                    if (s.has("ai_api_key")) putString("ai_api_key", s.optString("ai_api_key", com.example.data.remote.OpenAiClient.DEFAULT_API_KEY))
+                    if (s.has("ai_model_name")) putString("ai_model_name", s.optString("ai_model_name", com.example.data.remote.OpenAiClient.DEFAULT_MODEL))
+                    if (s.has("gemini_api_key")) putString("gemini_api_key", s.optString("gemini_api_key", ""))
                 }.apply()
+                com.example.data.remote.OpenAiClient.syncFromPreferences(context)
             }
 
             // Helper to resolve restored local photo URI on this device

@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Print
@@ -116,6 +117,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.remote.OpenAiClient
 import com.example.ui.components.MarkdownContent
 import com.example.ui.theme.AmberWarning
 import com.example.ui.theme.BlueInfo
@@ -596,6 +598,7 @@ fun AppMenuDrawerSheet(
     val isEn = uiState.language == AppLanguage.EN
     var printerDropdownExpanded by remember { mutableStateOf(false) }
     var showEditBusinessDialog by remember { mutableStateOf(false) }
+    var showEditAiConfigDialog by remember { mutableStateOf(false) }
 
     ModalDrawerSheet(
         drawerContainerColor = CharcoalBg,
@@ -1030,6 +1033,76 @@ fun AppMenuDrawerSheet(
                 }
             }
 
+            // 3.5 AI API Configuration Card (Domain / Base URL, API Key & Model)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, CharcoalBorder, RoundedCornerShape(12.dp)),
+                colors = CardDefaults.cardColors(containerColor = CharcoalSurface),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Key, contentDescription = null, tint = SupabaseGreen, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isEn) "AI API & DOMAIN CONFIG" else "KONFIGURASI API & DOMAIN AI",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.7.sp,
+                                color = SupabaseGreen
+                            )
+                        }
+                        TextButton(
+                            onClick = { showEditAiConfigDialog = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier
+                                .height(26.dp)
+                                .testTag("btn_edit_ai_api_config")
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(12.dp), tint = SupabaseGreen)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isEn) "Configure" else "Atur API", fontSize = 11.5.sp, color = SupabaseGreen)
+                        }
+                    }
+
+                    Text(
+                        text = "Domain: ${uiState.aiBaseUrl}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimaryDark,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    val maskedKey = remember(uiState.aiApiKey) {
+                        val k = uiState.aiApiKey.trim()
+                        when {
+                            k.isEmpty() -> if (isEn) "Not set" else "Belum diisi"
+                            k.length <= 10 -> "••••••••"
+                            else -> "${k.take(7)}••••${k.takeLast(4)}"
+                        }
+                    }
+
+                    Text(
+                        text = "Key: $maskedKey • Model: ${uiState.aiModelName}" +
+                                if (uiState.geminiApiKey.isNotBlank()) " • Gemini Aktif" else "",
+                        fontSize = 11.sp,
+                        color = TextSecondaryDark,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
             // 4. Thermal Printer Configuration Card
             PrinterConfigCard(
                 pairedPrinters = uiState.pairedPrinters,
@@ -1119,6 +1192,191 @@ fun AppMenuDrawerSheet(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showEditBusinessDialog = false }) {
+                    Text(if (isEn) "Cancel" else "Batal", color = TextSecondaryDark)
+                }
+            }
+        )
+    }
+
+    if (showEditAiConfigDialog) {
+        var baseUrlInput by remember { mutableStateOf(uiState.aiBaseUrl) }
+        var apiKeyInput by remember { mutableStateOf(uiState.aiApiKey) }
+        var modelInput by remember { mutableStateOf(uiState.aiModelName) }
+        var geminiKeyInput by remember { mutableStateOf(uiState.geminiApiKey) }
+        val context = LocalContext.current
+
+        AlertDialog(
+            onDismissRequest = { showEditAiConfigDialog = false },
+            containerColor = CharcoalSurface,
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isEn) "AI API & Domain Settings" else "Pengaturan Domain & API Key",
+                        fontSize = 15.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryDark
+                    )
+                    TextButton(
+                        onClick = {
+                            baseUrlInput = OpenAiClient.DEFAULT_BASE_URL
+                            apiKeyInput = OpenAiClient.DEFAULT_API_KEY
+                            modelInput = OpenAiClient.DEFAULT_MODEL
+                            geminiKeyInput = ""
+                        },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Reset Default",
+                            fontSize = 11.sp,
+                            color = AmberWarning,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = if (isEn) {
+                            "Stored locally in app settings so the project builds without requiring any .env variables."
+                        } else {
+                            "Tersimpan langsung di Pengaturan Aplikasi sehingga project dapat di-build tanpa perlu set variabel .env."
+                        },
+                        fontSize = 11.sp,
+                        color = TextSecondaryDark
+                    )
+
+                    OutlinedTextField(
+                        value = baseUrlInput,
+                        onValueChange = { baseUrlInput = it },
+                        label = { Text(if (isEn) "API Domain / Base URL" else "Domain / Base URL API") },
+                        placeholder = { Text("https://ai.drakor.pp.ua/v1/") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_ai_base_url"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SupabaseGreen,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimaryDark,
+                            unfocusedTextColor = TextPrimaryDark
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = apiKeyInput,
+                        onValueChange = { apiKeyInput = it },
+                        label = { Text(if (isEn) "API Key (Bearer Token)" else "API Key (OpenAI / Custom)") },
+                        placeholder = { Text("sk-... / freellmapi-...") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_ai_api_key"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SupabaseGreen,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimaryDark,
+                            unfocusedTextColor = TextPrimaryDark
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = modelInput,
+                        onValueChange = { modelInput = it },
+                        label = { Text(if (isEn) "Model Name" else "Nama Model AI") },
+                        placeholder = { Text("auto") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_ai_model_name"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SupabaseGreen,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimaryDark,
+                            unfocusedTextColor = TextPrimaryDark
+                        )
+                    )
+
+                    // Quick Model Preset Chips
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("auto", "qwen-3.8-27b", "fusion").forEach { preset ->
+                            val selected = modelInput.trim().equals(preset, ignoreCase = true)
+                            Surface(
+                                modifier = Modifier
+                                    .clickable { modelInput = preset }
+                                    .border(
+                                        1.dp,
+                                        if (selected) SupabaseGreen else CharcoalBorder,
+                                        RoundedCornerShape(6.dp)
+                                    ),
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (selected) SupabaseGreen.copy(alpha = 0.15f) else CharcoalSurfaceElevated
+                            ) {
+                                Text(
+                                    text = preset,
+                                    fontSize = 10.5.sp,
+                                    color = if (selected) SupabaseGreen else TextSecondaryDark,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = geminiKeyInput,
+                        onValueChange = { geminiKeyInput = it },
+                        label = { Text(if (isEn) "Gemini API Key (Optional)" else "Gemini API Key (Opsional)") },
+                        placeholder = { Text("AIzaSy...") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_gemini_api_key"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SupabaseGreen,
+                            unfocusedBorderColor = CharcoalBorder,
+                            focusedTextColor = TextPrimaryDark,
+                            unfocusedTextColor = TextPrimaryDark
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateAiApiConfig(
+                            baseUrl = baseUrlInput,
+                            apiKey = apiKeyInput,
+                            modelName = modelInput,
+                            geminiKey = geminiKeyInput
+                        )
+                        showEditAiConfigDialog = false
+                        Toast.makeText(
+                            context,
+                            if (isEn) "API & Domain settings saved" else "Konfigurasi API & Domain disimpan",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SupabaseGreen,
+                        contentColor = Color(0xFF042114)
+                    )
+                ) {
+                    Text(if (isEn) "Save" else "Simpan", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showEditAiConfigDialog = false }) {
                     Text(if (isEn) "Cancel" else "Batal", color = TextSecondaryDark)
                 }
             }

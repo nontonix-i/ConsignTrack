@@ -1,6 +1,6 @@
 package com.example.data.remote
 
-import com.example.BuildConfig
+import android.content.Context
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
@@ -67,10 +67,30 @@ interface OpenAiApiService {
 }
 
 object OpenAiClient {
-    private const val DEFAULT_BASE_URL = "https://ai.drakor.pp.ua/v1/"
-    private const val DEFAULT_API_KEY = "freellmapi-f657ed0085e8e45b7282037af89d6712e8fb0db6860fcf90"
+    const val DEFAULT_BASE_URL = "https://ai.drakor.pp.ua/v1/"
+    const val DEFAULT_API_KEY = "freellmapi-f657ed0085e8e45b7282037af89d6712e8fb0db6860fcf90"
+    const val DEFAULT_MODEL = "auto"
+
     private const val GEMINI_ENDPOINT =
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
+
+    @Volatile
+    private var runtimeBaseUrl: String = DEFAULT_BASE_URL
+
+    @Volatile
+    private var runtimeApiKey: String = DEFAULT_API_KEY
+
+    @Volatile
+    private var runtimeModel: String = DEFAULT_MODEL
+
+    @Volatile
+    private var runtimeGeminiKey: String = ""
+
+    @Volatile
+    private var cachedServiceUrl: String? = null
+
+    @Volatile
+    private var cachedService: OpenAiApiService? = null
 
     private val moshi: Moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
@@ -85,45 +105,74 @@ object OpenAiClient {
         })
         .build()
 
-    private fun getBaseUrl(): String {
-        val configured = try {
-            BuildConfig.OPENAI_BASE_URL
-        } catch (_: Exception) {
-            DEFAULT_BASE_URL
+    fun normalizeBaseUrl(rawUrl: String): String {
+        val trimmed = rawUrl.trim().ifBlank { DEFAULT_BASE_URL }
+        val withScheme = if (trimmed.startsWith("http://", ignoreCase = true) ||
+            trimmed.startsWith("https://", ignoreCase = true)
+        ) {
+            trimmed
+        } else {
+            "https://$trimmed"
         }
-        val url = if (configured.isNullOrBlank()) DEFAULT_BASE_URL else configured.trim()
-        return if (url.endsWith("/")) url else "$url/"
+        return if (withScheme.endsWith("/")) withScheme else "$withScheme/"
     }
 
-    fun getApiKey(): String {
-        val configured = try {
-            BuildConfig.OPENAI_API_KEY
-        } catch (_: Exception) {
-            DEFAULT_API_KEY
-        }
-        return if (configured.isNullOrBlank()) DEFAULT_API_KEY else configured.trim()
+    fun updateConfig(
+        baseUrl: String,
+        apiKey: String,
+        model: String = DEFAULT_MODEL,
+        geminiApiKey: String = ""
+    ) {
+        runtimeBaseUrl = normalizeBaseUrl(baseUrl)
+        runtimeApiKey = apiKey.trim()
+        runtimeModel = model.trim().ifBlank { DEFAULT_MODEL }
+        runtimeGeminiKey = geminiApiKey.trim()
     }
 
-    fun getGeminiApiKey(): String {
-        return try {
-            BuildConfig.GEMINI_API_KEY.trim()
-        } catch (_: Exception) {
-            ""
-        }
+    fun syncFromPreferences(context: Context) {
+        val prefs = context.getSharedPreferences("consigntrack_settings", Context.MODE_PRIVATE)
+        val url = prefs.getString("ai_base_url", DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
+        val key = prefs.getString("ai_api_key", DEFAULT_API_KEY) ?: DEFAULT_API_KEY
+        val model = prefs.getString("ai_model_name", DEFAULT_MODEL) ?: DEFAULT_MODEL
+        val geminiKey = prefs.getString("gemini_api_key", "") ?: ""
+        updateConfig(baseUrl = url, apiKey = key, model = model, geminiApiKey = geminiKey)
     }
 
-    val service: OpenAiApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(getBaseUrl())
-            .client(okHttpClient)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(OpenAiApiService::class.java)
+    fun getBaseUrl(): String = runtimeBaseUrl
+
+    fun getApiKey(): String = runtimeApiKey
+
+    fun getPreferredModel(): String = runtimeModel
+
+    fun getGeminiApiKey(): String = runtimeGeminiKey
+
+    private fun getOrBuildService(): OpenAiApiService {
+        val targetUrl = getBaseUrl()
+        val existing = cachedService
+        if (existing != null && cachedServiceUrl == targetUrl) {
+            return existing
+        }
+        return synchronized(this) {
+            val recheck = cachedService
+            if (recheck != null && cachedServiceUrl == targetUrl) {
+                recheck
+            } else {
+                val built = Retrofit.Builder()
+                    .baseUrl(targetUrl)
+                    .client(okHttpClient)
+                    .addConverterFactory(MoshiConverterFactory.create(moshi))
+                    .build()
+                    .create(OpenAiApiService::class.java)
+                cachedServiceUrl = targetUrl
+                cachedService = built
+                built
+            }
+        }
     }
 
     /**
-     * Calls Gemini 3.5 Flash with native functionDeclarations if GEMINI_API_KEY is configured,
-     * otherwise calls the OpenAI-compatible endpoint and parses structured tool calls + reply.
+     * Calls Gemini with native functionDeclarations if Gemini API Key is configured in Settings,
+     * otherwise calls the configured OpenAI-compatible endpoint and parses structured tool calls + reply.
      */
     suspend fun generateAgentTurn(
         systemContext: String,
@@ -143,9 +192,12 @@ object OpenAiClient {
             if (geminiResult != null) return@withContext geminiResult
         }
 
-        // Fallback / Primary OpenAI-compatible endpoint
-        val rawReply = generateAnswer(systemContext = systemContext, userQuery = userQuery)
-            ?: return@withContext null
+        // Primary OpenAI-compatible endpoint from Settings
+        val rawReply = generateAnswer(
+            systemContext = systemContext,
+            userQuery = userQuery,
+            preferredModel = getPreferredModel()
+        ) ?: return@withContext null
 
         val extractedCalls = if (enableTools) extractToolCallsFromText(rawReply) else emptyList()
         val cleanedText = stripToolCallBlocks(rawReply).trim()
@@ -320,16 +372,21 @@ object OpenAiClient {
     /**
      * Ask the remote OpenAI-compatible model with system instructions & user query.
      */
-    suspend fun generateAnswer(systemContext: String, userQuery: String, preferredModel: String = "auto"): String? {
+    suspend fun generateAnswer(
+        systemContext: String,
+        userQuery: String,
+        preferredModel: String = getPreferredModel()
+    ): String? {
         val apiKey = getApiKey()
         val authHeader = "Bearer $apiKey"
+        val apiService = getOrBuildService()
 
         val messages = listOf(
             OpenAiMessage(role = "system", content = systemContext),
             OpenAiMessage(role = "user", content = userQuery)
         )
 
-        val modelsToTry = listOf(preferredModel, "qwen-3.8-27b", "fusion")
+        val modelsToTry = listOf(preferredModel.ifBlank { "auto" }, "auto", "qwen-3.8-27b", "fusion").distinct()
         for (model in modelsToTry) {
             try {
                 val req = ChatCompletionRequest(
@@ -338,13 +395,13 @@ object OpenAiClient {
                     temperature = 0.3,
                     maxTokens = 1200
                 )
-                val response = service.createChatCompletion(authHeader, req)
+                val response = apiService.createChatCompletion(authHeader, req)
                 val reply = response.choices?.firstOrNull()?.message?.content?.trim()
                 if (!reply.isNullOrBlank()) {
                     return reply
                 }
             } catch (e: Exception) {
-                android.util.Log.w("OpenAiClient", "Failed calling model $model: ${e.message}")
+                android.util.Log.w("OpenAiClient", "Failed calling model $model at ${getBaseUrl()}: ${e.message}")
             }
         }
         return null
