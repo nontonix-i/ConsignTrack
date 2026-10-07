@@ -308,7 +308,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         routeOrder: Int,
         photoUri: String? = null,
         latitude: Double? = null,
-        longitude: Double? = null
+        longitude: Double? = null,
+        initialProducts: List<Triple<Long, Int, Double?>> = emptyList()
     ) {
         val app = getApplication<Application>()
         viewModelScope.launch {
@@ -323,18 +324,106 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
 
-            repository.saveCustomer(
-                Customer(
-                    name = name,
-                    address = finalAddress,
-                    phone = phone,
-                    route_day = routeDay,
-                    route_order = routeOrder,
-                    photo_uri = photoUri,
-                    latitude = latitude,
-                    longitude = longitude
-                )
+            val newCustomer = Customer(
+                name = name,
+                address = finalAddress,
+                phone = phone,
+                route_day = routeDay,
+                route_order = routeOrder,
+                photo_uri = photoUri,
+                latitude = latitude,
+                longitude = longitude
             )
+
+            if (initialProducts.isNotEmpty()) {
+                repository.saveCustomerWithCustomPricesAndStocks(
+                    customer = newCustomer,
+                    productConfigs = initialProducts
+                )
+            } else {
+                repository.saveCustomer(newCustomer)
+            }
+        }
+    }
+
+    /**
+     * 1-Tap Quick Auto-Add Warung with automatic sequential naming + real-time GPS coordinates + auto address.
+     */
+    fun instantAutoAddWarungWithGps(
+        customName: String? = null,
+        initialProducts: List<Triple<Long, Int, Double?>> = emptyList(),
+        onCreated: (warungName: String, hasGps: Boolean) -> Unit = { _, _ -> }
+    ) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val state = uiState.value
+            val targetDay = if (state.selectedDay == "Semua") state.todayDayName else state.selectedDay
+            val dayCustomers = state.allCustomers.filter {
+                it.customer.route_day.equals(targetDay, ignoreCase = true)
+            }
+            val nextOrder = (dayCustomers.maxOfOrNull { it.customer.route_order } ?: 0) + 1
+            val nextGlobalNumber = state.allCustomers.size + 1
+
+            // Grab existing GPS fix or fetch a fast multi-source fix
+            var loc: Location? = _userLocation.value
+            if (loc == null && LocationHelper.hasLocationPermission(app)) {
+                loc = LocationHelper.getFreshLocation(
+                    context = app,
+                    timeoutMs = 2800L,
+                    targetAccuracyMeters = 20f
+                )
+                if (loc != null) {
+                    _userLocation.value = loc
+                }
+            }
+
+            val lat = loc?.latitude
+            val lng = loc?.longitude
+            var resolvedAddress = ""
+            if (LocationHelper.isValidCoordinate(lat, lng)) {
+                resolvedAddress = LocationHelper.reverseGeocodeAddress(app, lat!!, lng!!).orEmpty()
+            }
+
+            val generatedName = if (!customName.isNullOrBlank()) {
+                customName.trim()
+            } else {
+                "Warung #%02d".format(nextGlobalNumber)
+            }
+
+            val newCust = Customer(
+                name = generatedName,
+                address = resolvedAddress,
+                phone = "",
+                route_day = targetDay,
+                route_order = nextOrder,
+                photo_uri = null,
+                latitude = lat,
+                longitude = lng
+            )
+
+            if (initialProducts.isNotEmpty()) {
+                repository.saveCustomerWithCustomPricesAndStocks(
+                    customer = newCust,
+                    productConfigs = initialProducts
+                )
+            } else {
+                repository.saveCustomer(newCust)
+            }
+
+            onCreated(generatedName, LocationHelper.isValidCoordinate(lat, lng))
+        }
+    }
+
+    /**
+     * Bulk adds or increments multiple consigned products for a given warung directly from the Dashboard.
+     */
+    fun bulkAddProductsToCustomer(
+        customerId: Long,
+        productAdditions: List<Triple<Long, Int, Double?>>
+    ) {
+        if (productAdditions.isEmpty()) return
+        viewModelScope.launch {
+            repository.addOrIncrementStocksBulk(customerId, productAdditions)
         }
     }
 

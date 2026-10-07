@@ -65,6 +65,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -147,6 +149,7 @@ fun DashboardScreen(
     var editGpsTargetCustomer by remember { mutableStateOf<Customer?>(null) }
     var editWarungTargetItem by remember { mutableStateOf<CustomerWithStatus?>(null) }
     var editWarungInitialTab by remember { mutableStateOf(0) }
+    var bulkProductTargetItem by remember { mutableStateOf<CustomerWithStatus?>(null) }
     val context = LocalContext.current
 
     // Request permission untuk GPS real-time & pengurutan terdekat
@@ -206,14 +209,47 @@ fun DashboardScreen(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // 1-Tap Quick Auto-Add Warung + GPS Button
+                    Box(
+                        modifier = Modifier
+                            .background(SupabaseGreen, RoundedCornerShape(8.dp))
+                            .clickable {
+                                viewModel.instantAutoAddWarungWithGps { createdName, hasGps ->
+                                    val gpsInfo = if (hasGps) "beserta koordinat GPS" else "(tanpa titik GPS)"
+                                    Toast.makeText(
+                                        context,
+                                        "⚡ $createdName otomatis ditambahkan $gpsInfo!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                            .padding(horizontal = 9.dp, vertical = 5.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.MyLocation,
+                                contentDescription = "Auto Add Cepat Warung + GPS",
+                                tint = Color(0xFF042114),
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "+ Auto Warung GPS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF042114)
+                            )
+                        }
+                    }
+
                     Box(
                         modifier = Modifier
                             .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
                             .border(1.dp, SupabaseGreen.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
                             .clickable { onOpenBackupRestore() }
-                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -224,8 +260,8 @@ fun DashboardScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Backup .ZIP",
-                                fontSize = 11.5.sp,
+                                text = ".ZIP",
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = SupabaseGreen
                             )
@@ -236,11 +272,11 @@ fun DashboardScreen(
                         modifier = Modifier
                             .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
                             .border(1.dp, CharcoalBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "${uiState.allCustomers.size} Warung",
-                            fontSize = 12.sp,
+                            text = "${uiState.allCustomers.size} Toko",
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimaryDark
                         )
@@ -646,15 +682,24 @@ fun DashboardScreen(
                             }
 
                             OutlinedButton(
-                                onClick = onOpenBackupRestore,
+                                onClick = {
+                                    viewModel.instantAutoAddWarungWithGps { createdName, hasGps ->
+                                        val gpsInfo = if (hasGps) "+ Koordinat GPS" else "(Tanpa GPS)"
+                                        Toast.makeText(
+                                            context,
+                                            "⚡ $createdName otomatis ditambahkan $gpsInfo!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                },
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = SupabaseGreen),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                                 modifier = Modifier.height(36.dp)
                             ) {
-                                Icon(Icons.Default.FolderZip, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text("Backup / Restore .ZIP", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Auto-Add GPS", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -692,6 +737,9 @@ fun DashboardScreen(
                                 editWarungInitialTab = initialTab
                                 editWarungTargetItem = item
                             },
+                            onBulkAddProducts = {
+                                bulkProductTargetItem = item
+                            },
                             onViewPerformance = {
                                 viewModel.openCustomerPerformance(item.customer)
                             }
@@ -702,17 +750,44 @@ fun DashboardScreen(
         }
     }
 
-    // Add Customer Dialog with GPS Auto-Fill & Manual Fill
+    // Add Customer Dialog with Smart Auto-Naming, GPS Auto-Fill & Bulk Product Selection
     if (showAddDialog) {
         AddCustomerWithRouteDialog(
             defaultDay = if (uiState.selectedDay == "Semua") uiState.todayDayName else uiState.selectedDay,
             nextRouteOrder = (uiState.filteredCustomers.maxOfOrNull { it.customer.route_order } ?: 0) + 1,
+            nextGlobalWarungNumber = uiState.allCustomers.size + 1,
+            allProducts = uiState.allProducts,
             currentDeviceLocation = uiState.userLocation,
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, addr, phone, day, order, photoUri, lat, lng ->
-                viewModel.addCustomer(name, addr, phone, day, order, photoUri, lat, lng)
+            onConfirm = { name, addr, phone, day, order, photoUri, lat, lng, initialProducts ->
+                viewModel.addCustomer(name, addr, phone, day, order, photoUri, lat, lng, initialProducts)
                 showAddDialog = false
             }
+        )
+    }
+
+    // Bulk Add Products Dialog directly from Warung Card on Dashboard
+    if (bulkProductTargetItem != null) {
+        val targetItem = uiState.allCustomers.find { it.customer.id == bulkProductTargetItem!!.customer.id }
+            ?: bulkProductTargetItem!!
+        AddProductToOutletDialog(
+            catalogProducts = uiState.allProducts,
+            existingItemIds = targetItem.stockItems.filter { it.quantityPieces > 0 }.map { it.productId }.toSet(),
+            outletName = targetItem.customer.name,
+            allowExistingProducts = true,
+            onAddProductsBulk = { bulkList ->
+                val additions = bulkList.map { sel ->
+                    Triple(sel.product.id, sel.totalPieces, sel.customPricePack)
+                }
+                viewModel.bulkAddProductsToCustomer(targetItem.customer.id, additions)
+                Toast.makeText(
+                    context,
+                    "✅ ${bulkList.size} produk berhasil ditambahkan ke ${targetItem.customer.name}!",
+                    Toast.LENGTH_SHORT
+                ).show()
+                bulkProductTargetItem = null
+            },
+            onDismiss = { bulkProductTargetItem = null }
         )
     }
 
@@ -835,6 +910,7 @@ private fun CustomerRouteCard(
     onOpenMaps: () -> Unit,
     onEditGps: () -> Unit,
     onEditWarungInfo: (initialTab: Int) -> Unit,
+    onBulkAddProducts: () -> Unit,
     onViewPerformance: () -> Unit
 ) {
     val hasPhoto = !item.customer.photo_uri.isNullOrBlank()
@@ -1035,20 +1111,37 @@ private fun CustomerRouteCard(
                         color = if (item.totalActiveStock > 0) TextPrimaryDark else TextMutedDark
                     )
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         if (item.customPricesByProduct.isNotEmpty()) {
                             Text(
-                                text = "${item.customPricesByProduct.size} Harga Khusus • ",
+                                text = "${item.customPricesByProduct.size} Harga Khusus",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = AmberWarning
                             )
                         }
+                        Box(
+                            modifier = Modifier
+                                .background(SupabaseGreen.copy(alpha = 0.16f), RoundedCornerShape(6.dp))
+                                .border(1.dp, SupabaseGreen.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                .clickable { onBulkAddProducts() }
+                                .padding(horizontal = 7.dp, vertical = 2.5.dp)
+                        ) {
+                            Text(
+                                text = "+ Bulk Produk",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = SupabaseGreen
+                            )
+                        }
                         Text(
-                            text = "Atur Harga/Stok",
+                            text = "Atur Stok",
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = SupabaseGreen
+                            color = TextSecondaryDark
                         )
                     }
                 }
@@ -1152,6 +1245,8 @@ private fun CustomerRouteCard(
 private fun AddCustomerWithRouteDialog(
     defaultDay: String,
     nextRouteOrder: Int,
+    nextGlobalWarungNumber: Int,
+    allProducts: List<Product>,
     currentDeviceLocation: android.location.Location?,
     onDismiss: () -> Unit,
     onConfirm: (
@@ -1162,13 +1257,15 @@ private fun AddCustomerWithRouteDialog(
         routeOrder: Int,
         photoUri: String?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        initialProducts: List<Triple<Long, Int, Double?>>
     ) -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val defaultAutoName = remember(nextGlobalWarungNumber) {
+        "Warung #%02d".format(nextGlobalWarungNumber)
+    }
 
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(defaultAutoName) }
     var address by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var selectedDay by remember { mutableStateOf(defaultDay) }
@@ -1176,7 +1273,6 @@ private fun AddCustomerWithRouteDialog(
     var photoUri by remember { mutableStateOf<String?>(null) }
     var showPhotoChooser by remember { mutableStateOf(false) }
     var dayDropdownExpanded by remember { mutableStateOf(false) }
-    var showManualGps by remember { mutableStateOf(false) }
 
     var latitudeStr by remember {
         mutableStateOf(currentDeviceLocation?.latitude?.let { "%.6f".format(Locale.US, it) } ?: "")
@@ -1186,21 +1282,62 @@ private fun AddCustomerWithRouteDialog(
     }
     var lastAutoAddress by remember { mutableStateOf("") }
 
+    // Bulk Initial Product Checkboxes & Pack Quantities inside Add Warung Dialog
+    val checkedProducts = remember(allProducts) {
+        androidx.compose.runtime.mutableStateMapOf<Long, Boolean>()
+    }
+    val productPacks = remember(allProducts) {
+        androidx.compose.runtime.mutableStateMapOf<Long, Int>().apply {
+            allProducts.forEach { put(it.id, 1) }
+        }
+    }
+
+    // Dynamic naming suggestions (including GPS street name if available)
+    val namingPresets = remember(nextGlobalWarungNumber, selectedDay, address) {
+        val numStr = "#%02d".format(nextGlobalWarungNumber)
+        val streetShort = address.split(",").firstOrNull()?.trim()?.take(18)?.takeIf {
+            it.isNotBlank() && !it.startsWith("Koordinat", ignoreCase = true) && !it.startsWith("-")
+        }
+        buildList {
+            add("Warung $numStr")
+            if (streetShort != null) {
+                add("Warung $streetShort $numStr")
+            }
+            add("Toko $numStr")
+            add("Warung $selectedDay $numStr")
+            add("Mitra $numStr")
+        }.distinct()
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .fillMaxWidth(0.96f)
+            .heightIn(max = 700.dp)
             .border(1.dp, CharcoalBorder, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         containerColor = CharcoalSurface,
         title = {
-            Text(
-                text = "Tambah Warung",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimaryDark
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Auto-Add Warung & Bulk Produk",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryDark
+                    )
+                    Text(
+                        text = "Nama otomatis + titik GPS real-time + centang produk awal",
+                        fontSize = 11.sp,
+                        color = SupabaseGreen
+                    )
+                }
+            }
         },
         text = {
             Column(
@@ -1209,7 +1346,7 @@ private fun AddCustomerWithRouteDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Row 1: Thumbnail Foto + Nama Warung
+                // Row 1: Thumbnail Foto + Nama Warung (Pre-filled otomatis!)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1239,7 +1376,7 @@ private fun AddCustomerWithRouteDialog(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Nama Warung *") },
+                        label = { Text("Nama Warung (Otomatis / Ketik)") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
@@ -1249,6 +1386,35 @@ private fun AddCustomerWithRouteDialog(
                         ),
                         modifier = Modifier.weight(1f)
                     )
+                }
+
+                // Quick Auto-Naming Chips
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(namingPresets) { preset ->
+                        val isSelectedName = name == preset
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelectedName) SupabaseGreen else CharcoalSurfaceElevated)
+                                .border(
+                                    1.dp,
+                                    if (isSelectedName) SupabaseGreen else CharcoalBorder,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable { name = preset }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = preset,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelectedName) Color(0xFF042114) else TextSecondaryDark
+                            )
+                        }
+                    }
                 }
 
                 // Row 2: Hari Rute & No. Urut
@@ -1311,37 +1477,7 @@ private fun AddCustomerWithRouteDialog(
                     )
                 }
 
-                // Row 3: No. WA & Alamat (Auto-filled from GPS when online/cached)
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text("No. WhatsApp (Opsional)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = SupabaseGreen,
-                        unfocusedBorderColor = CharcoalBorder,
-                        focusedTextColor = TextPrimaryDark,
-                        unfocusedTextColor = TextPrimaryDark
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it },
-                    label = { Text("Alamat (Otomatis dari GPS / Ketik Manual)") },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = SupabaseGreen,
-                        unfocusedBorderColor = CharcoalBorder,
-                        focusedTextColor = TextPrimaryDark,
-                        unfocusedTextColor = TextPrimaryDark
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Row 4: Smart Multi-Source GPS + Real-Time + Auto Address Section
+                // Row 3: Smart Multi-Source GPS + Real-Time + Auto Address Section
                 GpsSmartCoordinateSection(
                     latitudeStr = latitudeStr,
                     longitudeStr = longitudeStr,
@@ -1358,23 +1494,279 @@ private fun AddCustomerWithRouteDialog(
                         }
                     }
                 )
+
+                // Row 4: Alamat & No. WA
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Alamat (Otomatis dari GPS / Ketik Manual)") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SupabaseGreen,
+                        unfocusedBorderColor = CharcoalBorder,
+                        focusedTextColor = TextPrimaryDark,
+                        unfocusedTextColor = TextPrimaryDark
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("No. WhatsApp (Opsional)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SupabaseGreen,
+                        unfocusedBorderColor = CharcoalBorder,
+                        focusedTextColor = TextPrimaryDark,
+                        unfocusedTextColor = TextPrimaryDark
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Row 5: Bulk Pilih Produk Titipan Awal (Centang Produk & Jumlah Pack)
+                if (allProducts.isNotEmpty()) {
+                    val allChecked = allProducts.all { checkedProducts[it.id] == true }
+                    val selectedCount = allProducts.count { checkedProducts[it.id] == true }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(CharcoalSurfaceElevated, RoundedCornerShape(10.dp))
+                            .border(1.dp, CharcoalBorder, RoundedCornerShape(10.dp))
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Bulk Pilih Produk Titipan Awal",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimaryDark
+                                )
+                                Text(
+                                    text = if (selectedCount > 0) "$selectedCount produk dipilih" else "Centang produk yang langsung dititipkan",
+                                    fontSize = 10.5.sp,
+                                    color = if (selectedCount > 0) SupabaseGreen else TextSecondaryDark
+                                )
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (allChecked) SupabaseGreen else CharcoalSurface)
+                                        .border(1.dp, SupabaseGreen, RoundedCornerShape(6.dp))
+                                        .clickable {
+                                            val target = !allChecked
+                                            allProducts.forEach { p ->
+                                                checkedProducts[p.id] = target
+                                                if (target && (productPacks[p.id] ?: 0) <= 0) {
+                                                    productPacks[p.id] = 1
+                                                }
+                                            }
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = if (allChecked) "Batal Semua" else "Centang Semua",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (allChecked) Color(0xFF042114) else SupabaseGreen
+                                    )
+                                }
+                            }
+                        }
+
+                        // Quick pack presets for checked products
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Set Jumlah:", fontSize = 10.sp, color = TextMutedDark)
+                            listOf(1, 2, 3).forEach { packPreset ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(CharcoalSurface)
+                                        .border(1.dp, CharcoalBorder, RoundedCornerShape(5.dp))
+                                        .clickable {
+                                            val targets = allProducts.filter { checkedProducts[it.id] == true }
+                                                .ifEmpty {
+                                                    allProducts.forEach { checkedProducts[it.id] = true }
+                                                    allProducts
+                                                }
+                                            targets.forEach { productPacks[it.id] = packPreset }
+                                        }
+                                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = "$packPreset Pack",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = SupabaseGreen
+                                    )
+                                }
+                            }
+                        }
+
+                        allProducts.forEach { prod ->
+                            val isChecked = checkedProducts[prod.id] == true
+                            val packs = productPacks[prod.id] ?: 1
+                            val totalPcs = packs * maxOf(1, prod.pieces_per_pack)
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isChecked) SupabaseGreen.copy(alpha = 0.10f) else CharcoalSurface)
+                                    .border(
+                                        1.dp,
+                                        if (isChecked) SupabaseGreen else CharcoalBorder,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        val next = !isChecked
+                                        checkedProducts[prod.id] = next
+                                        if (next && packs <= 0) productPacks[prod.id] = 1
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = {
+                                            val next = !isChecked
+                                            checkedProducts[prod.id] = next
+                                            if (next && packs <= 0) productPacks[prod.id] = 1
+                                        },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = SupabaseGreen,
+                                            uncheckedColor = TextMutedDark,
+                                            checkmarkColor = Color(0xFF042114)
+                                        ),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Column {
+                                        Text(
+                                            text = prod.name,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimaryDark
+                                        )
+                                        Text(
+                                            text = "Rp %,.0f/%s (%d %s)".format(
+                                                prod.selling_price_pack,
+                                                prod.unit_big,
+                                                prod.pieces_per_pack,
+                                                prod.unit_small
+                                            ),
+                                            fontSize = 10.sp,
+                                            color = TextSecondaryDark
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .background(CharcoalSurfaceElevated, RoundedCornerShape(5.dp))
+                                            .border(1.dp, CharcoalBorder, RoundedCornerShape(5.dp))
+                                            .clickable {
+                                                if (packs > 1) {
+                                                    productPacks[prod.id] = packs - 1
+                                                } else {
+                                                    checkedProducts[prod.id] = false
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = null, tint = TextPrimaryDark, modifier = Modifier.size(12.dp))
+                                    }
+
+                                    Text(
+                                        text = "$packs ${prod.unit_big} ($totalPcs)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isChecked) SupabaseGreen else TextSecondaryDark
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .background(SupabaseGreen.copy(alpha = 0.2f), RoundedCornerShape(5.dp))
+                                            .clickable {
+                                                if (!isChecked) {
+                                                    checkedProducts[prod.id] = true
+                                                    productPacks[prod.id] = maxOf(1, packs)
+                                                } else {
+                                                    productPacks[prod.id] = packs + 1
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = null, tint = SupabaseGreen, modifier = Modifier.size(12.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
+            val selectedInitialProducts = allProducts.mapNotNull { prod ->
+                if (checkedProducts[prod.id] == true) {
+                    val pks = (productPacks[prod.id] ?: 1).coerceAtLeast(1)
+                    val totalPcs = pks * maxOf(1, prod.pieces_per_pack)
+                    Triple(prod.id, totalPcs, null as Double?)
+                } else null
+            }
             Button(
                 onClick = {
-                    if (name.isNotBlank()) {
-                        val lat = latitudeStr.toDoubleOrNull()
-                        val lng = longitudeStr.toDoubleOrNull()
-                        val order = routeOrder.toIntOrNull() ?: 1
-                        onConfirm(name.trim(), address.trim(), phone.trim(), selectedDay, order, photoUri, lat, lng)
-                    }
+                    val finalName = name.trim().ifBlank { defaultAutoName }
+                    val lat = latitudeStr.toDoubleOrNull()
+                    val lng = longitudeStr.toDoubleOrNull()
+                    val order = routeOrder.toIntOrNull() ?: 1
+                    onConfirm(
+                        finalName,
+                        address.trim(),
+                        phone.trim(),
+                        selectedDay,
+                        order,
+                        photoUri,
+                        lat,
+                        lng,
+                        selectedInitialProducts
+                    )
                 },
-                enabled = name.isNotBlank(),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114))
             ) {
-                Text("Simpan", fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (selectedInitialProducts.isNotEmpty()) {
+                        "Simpan Warung + ${selectedInitialProducts.size} Produk"
+                    } else {
+                        "Simpan Warung"
+                    },
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
@@ -1805,7 +2197,7 @@ private fun EditCustomerAndPricesDialog(
                     )
                 }
             } else {
-                // Tab 1: Minimalist Harga Khusus & Titip Lalu per Produk
+                // Tab 1: Minimalist Harga Khusus & Titip Lalu per Produk (Bulk Checkbox Enabled)
                 if (allProducts.isEmpty()) {
                     Text(
                         text = "Belum ada produk di katalog.",
@@ -1813,60 +2205,167 @@ private fun EditCustomerAndPricesDialog(
                         color = TextSecondaryDark
                     )
                 } else {
-                    LazyColumn(
+                    val allActive = allProducts.all { (stockQuantityMap[it.id] ?: 0) > 0 }
+
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(allProducts, key = { it.id }) { prod ->
-                            val pcsPerPack = maxOf(1, prod.pieces_per_pack)
-                            val currentQtyPcs = stockQuantityMap[prod.id] ?: 0
-                            val pricePackStr = customPricePackMap[prod.id] ?: "%.0f".format(prod.selling_price_pack)
-                            val parsedPackPrice = pricePackStr.toDoubleOrNull() ?: prod.selling_price_pack
-                            val parsedUnitPrice = parsedPackPrice / pcsPerPack
-                            val isCustomPrice = kotlin.math.abs(parsedPackPrice - prod.selling_price_pack) >= 0.5
-
-                            Column(
+                        // Bulk Action Bar for Tab 1
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
+                                .border(1.dp, CharcoalBorder, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
-                                    .border(
-                                        1.dp,
-                                        if (isCustomPrice) AmberWarning.copy(alpha = 0.45f) else CharcoalBorder,
-                                        RoundedCornerShape(8.dp)
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 8.dp)
-                            ) {
-                                // Top line: Nama Produk & Harga Standar / Reset
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = prod.name,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimaryDark
-                                    )
-
-                                    if (isCustomPrice) {
-                                        Text(
-                                            text = "Reset (Rp %,.0f)".format(prod.selling_price_pack),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = AmberWarning,
-                                            modifier = Modifier.clickable {
-                                                customPricePackMap[prod.id] = "%.0f".format(prod.selling_price_pack)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (allActive) SupabaseGreen else CharcoalSurface)
+                                    .border(1.dp, SupabaseGreen, RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        if (allActive) {
+                                            allProducts.forEach { p -> stockQuantityMap[p.id] = 0 }
+                                        } else {
+                                            allProducts.forEach { p ->
+                                                if ((stockQuantityMap[p.id] ?: 0) <= 0) {
+                                                    stockQuantityMap[p.id] = maxOf(1, p.pieces_per_pack)
+                                                }
                                             }
-                                        )
-                                    } else {
+                                        }
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = if (allActive) "Kosongkan Semua" else "Centang Semua",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (allActive) Color(0xFF042114) else SupabaseGreen
+                                )
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                listOf(1, 2, 3).forEach { pCount ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(5.dp))
+                                            .background(CharcoalSurface)
+                                            .border(1.dp, CharcoalBorder, RoundedCornerShape(5.dp))
+                                            .clickable {
+                                                val checkedList = allProducts.filter { (stockQuantityMap[it.id] ?: 0) > 0 }
+                                                    .ifEmpty { allProducts }
+                                                checkedList.forEach { p ->
+                                                    stockQuantityMap[p.id] = pCount * maxOf(1, p.pieces_per_pack)
+                                                }
+                                            }
+                                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                                    ) {
                                         Text(
-                                            text = "@Rp %,.0f/%s".format(parsedUnitPrice, prod.unit_small),
+                                            text = "Set $pCount Pack",
                                             fontSize = 10.sp,
-                                            color = TextMutedDark
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = SupabaseGreen
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(allProducts, key = { it.id }) { prod ->
+                                val pcsPerPack = maxOf(1, prod.pieces_per_pack)
+                                val currentQtyPcs = stockQuantityMap[prod.id] ?: 0
+                                val isProdChecked = currentQtyPcs > 0
+                                val pricePackStr = customPricePackMap[prod.id] ?: "%.0f".format(prod.selling_price_pack)
+                                val parsedPackPrice = pricePackStr.toDoubleOrNull() ?: prod.selling_price_pack
+                                val parsedUnitPrice = parsedPackPrice / pcsPerPack
+                                val isCustomPrice = kotlin.math.abs(parsedPackPrice - prod.selling_price_pack) >= 0.5
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            if (isProdChecked) SupabaseGreen.copy(alpha = 0.08f) else CharcoalSurfaceElevated,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            when {
+                                                isProdChecked -> SupabaseGreen.copy(alpha = 0.7f)
+                                                isCustomPrice -> AmberWarning.copy(alpha = 0.45f)
+                                                else -> CharcoalBorder
+                                            },
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                                ) {
+                                    // Top line: Checkbox + Nama Produk & Harga Standar / Reset
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable {
+                                                    if (isProdChecked) {
+                                                        stockQuantityMap[prod.id] = 0
+                                                    } else {
+                                                        stockQuantityMap[prod.id] = pcsPerPack
+                                                    }
+                                                }
+                                        ) {
+                                            Checkbox(
+                                                checked = isProdChecked,
+                                                onCheckedChange = { checked ->
+                                                    if (checked) {
+                                                        if (currentQtyPcs <= 0) stockQuantityMap[prod.id] = pcsPerPack
+                                                    } else {
+                                                        stockQuantityMap[prod.id] = 0
+                                                    }
+                                                },
+                                                colors = CheckboxDefaults.colors(
+                                                    checkedColor = SupabaseGreen,
+                                                    uncheckedColor = TextMutedDark,
+                                                    checkmarkColor = Color(0xFF042114)
+                                                ),
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = prod.name,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimaryDark
+                                            )
+                                        }
+
+                                        if (isCustomPrice) {
+                                            Text(
+                                                text = "Reset (Rp %,.0f)".format(prod.selling_price_pack),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = AmberWarning,
+                                                modifier = Modifier.clickable {
+                                                    customPricePackMap[prod.id] = "%.0f".format(prod.selling_price_pack)
+                                                }
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "@Rp %,.0f/%s".format(parsedUnitPrice, prod.unit_small),
+                                                fontSize = 10.sp,
+                                                color = TextMutedDark
+                                            )
+                                        }
+                                    }
 
                                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -1965,6 +2464,7 @@ private fun EditCustomerAndPricesDialog(
                         }
                     }
                 }
+            }
             }
         },
         confirmButton = {

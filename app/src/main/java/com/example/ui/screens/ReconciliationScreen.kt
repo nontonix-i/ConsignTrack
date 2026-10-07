@@ -350,13 +350,17 @@ fun ReconciliationScreen(
         )
     }
 
-    // Add Product To Outlet Dialog
+    // Add Product To Outlet Dialog (Bulk Multi-Select)
     if (uiState.showAddProductDialog) {
         AddProductToOutletDialog(
             catalogProducts = uiState.catalogProducts,
             existingItemIds = uiState.items.map { it.product.id }.toSet(),
+            outletName = uiState.customer?.name,
             onAddProduct = { product, packs, customPricePack ->
                 viewModel.addProductToOutlet(product, packs, customPricePack)
+            },
+            onAddProductsBulk = { bulkList ->
+                viewModel.addProductsBulkToOutlet(bulkList)
             },
             onDismiss = { viewModel.setShowAddProductDialog(false) }
         )

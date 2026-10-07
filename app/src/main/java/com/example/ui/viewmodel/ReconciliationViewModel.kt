@@ -10,6 +10,7 @@ import com.example.data.repository.ConsignmentRepository
 import com.example.domain.model.CustomerPerformance
 import com.example.domain.model.ReceiptData
 import com.example.domain.model.ReconciliationItem
+import com.example.ui.screens.BulkProductSelection
 import com.example.util.thermal.BluetoothPrinterManager
 import com.example.util.thermal.PairedPrinter
 import kotlinx.coroutines.Job
@@ -130,6 +131,45 @@ class ReconciliationViewModel(application: Application) : AndroidViewModel(appli
         if (custId != null && customPricePack != null && customPricePack > 0.0) {
             viewModelScope.launch {
                 repository.updateProductCustomPriceForCustomer(custId, product.id, customPricePack)
+            }
+        }
+    }
+
+    fun addProductsBulkToOutlet(selections: List<BulkProductSelection>) {
+        if (selections.isEmpty()) return
+        val custId = _uiState.value.customer?.id
+        _uiState.update { state ->
+            val currentById = state.items.associateBy { it.product.id }.toMutableMap()
+            selections.forEach { sel ->
+                val existing = currentById[sel.product.id]
+                if (existing != null) {
+                    currentById[sel.product.id] = existing.copy(
+                        addedPacks = existing.addedPacks + sel.packs,
+                        addedPiecesExtra = existing.addedPiecesExtra + sel.extraPieces,
+                        customPricePack = sel.customPricePack?.takeIf { it > 0.0 } ?: existing.customPricePack
+                    )
+                } else {
+                    currentById[sel.product.id] = ReconciliationItem(
+                        product = sel.product,
+                        previousStock = 0,
+                        remainingStock = 0,
+                        isAutoSwapReturned = false,
+                        manualReturnedQuantity = 0,
+                        addedPacks = maxOf(0, sel.packs),
+                        addedPiecesExtra = maxOf(0, sel.extraPieces),
+                        customPricePack = sel.customPricePack?.takeIf { it > 0.0 }
+                    )
+                }
+            }
+            state.copy(items = currentById.values.toList(), showAddProductDialog = false)
+        }
+        if (custId != null) {
+            viewModelScope.launch {
+                selections.forEach { sel ->
+                    if (sel.customPricePack != null && sel.customPricePack > 0.0) {
+                        repository.updateProductCustomPriceForCustomer(custId, sel.product.id, sel.customPricePack)
+                    }
+                }
             }
         }
     }

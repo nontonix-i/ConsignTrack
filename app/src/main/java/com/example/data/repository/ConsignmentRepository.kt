@@ -260,6 +260,41 @@ class ConsignmentRepository(
     }
 
     /**
+     * Bulk adds or increments consigned stock quantities (in pieces) and optional custom prices
+     * for multiple products at a given warung/customer.
+     */
+    suspend fun addOrIncrementStocksBulk(
+        customerId: Long,
+        productAdditions: List<Triple<Long, Int, Double?>>
+    ) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        productAdditions.forEach { (productId, addPieces, customPricePack) ->
+            val cleanAdd = addPieces.coerceAtLeast(0)
+            val cleanCustomPrice = customPricePack?.takeIf { it > 0.0 }
+            val existing = stockDao.getStock(customerId, productId)
+            if (existing != null) {
+                stockDao.updateStock(
+                    existing.copy(
+                        current_quantity = existing.current_quantity + cleanAdd,
+                        custom_price_pack = cleanCustomPrice ?: existing.custom_price_pack,
+                        last_updated = now
+                    )
+                )
+            } else if (cleanAdd > 0 || cleanCustomPrice != null) {
+                stockDao.insertOrUpdateStock(
+                    ConsignmentStock(
+                        customer_id = customerId,
+                        product_id = productId,
+                        current_quantity = cleanAdd,
+                        custom_price_pack = cleanCustomPrice,
+                        last_updated = now
+                    )
+                )
+            }
+        }
+    }
+
+    /**
      * Updates a single product's previous/current consigned stock and custom price for a customer.
      */
     suspend fun updateCustomerProductStockAndPrice(
