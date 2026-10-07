@@ -101,6 +101,8 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
+import com.example.ui.theme.trDay
 import com.example.ui.viewmodel.ReconciliationViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -135,7 +137,7 @@ fun ReconciliationScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Kunjungan Warung",
+                            text = tr("Kunjungan Warung", "Store Visit"),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryDark
@@ -153,7 +155,7 @@ fun ReconciliationScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = tr("Kembali", "Back"),
                             tint = TextPrimaryDark
                         )
                     }
@@ -162,7 +164,7 @@ fun ReconciliationScreen(
                     IconButton(onClick = { viewModel.setShowPerformanceDialog(true) }) {
                         Icon(
                             Icons.Default.Insights,
-                            contentDescription = "Statistik & Riwayat Warung",
+                            contentDescription = tr("Statistik & Riwayat Warung", "Store Stats & History"),
                             tint = AmberWarning
                         )
                     }
@@ -248,7 +250,7 @@ fun ReconciliationScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Belum Ada Produk Dititipkan",
+                                    text = tr("Belum Ada Produk Dititipkan", "No Consigned Products Yet"),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimaryDark
@@ -264,7 +266,7 @@ fun ReconciliationScreen(
                                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF042114))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Tambah Produk",
+                                        text = tr("Tambah Produk", "Add Product"),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF042114)
@@ -326,7 +328,7 @@ fun ReconciliationScreen(
 
     if (showPhotoChooser) {
         PhotoChooserBottomSheet(
-            title = "Foto Kunjungan / Rak Warung",
+            title = tr("Foto Kunjungan / Rak Warung", "Visit / Store Shelf Photo"),
             hasExistingPhoto = uiState.visitPhotoUri != null,
             existingPhotoUri = uiState.visitPhotoUri,
             onPhotoSelected = { uri ->
@@ -345,7 +347,7 @@ fun ReconciliationScreen(
     if (uiState.showPerformanceDialog) {
         CustomerPerformanceDialog(
             performance = uiState.performance,
-            customerName = uiState.customer?.name ?: "Warung",
+            customerName = uiState.customer?.name ?: tr("Warung", "Store"),
             onDismiss = { viewModel.setShowPerformanceDialog(false) }
         )
     }
@@ -392,7 +394,7 @@ fun ReconciliationScreen(
             containerColor = CharcoalSurface,
             title = {
                 Text(
-                    text = "Edit Info Warung",
+                    text = tr("Edit Info Warung", "Edit Store Info"),
                     fontSize = 15.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark
@@ -408,7 +410,7 @@ fun ReconciliationScreen(
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
-                        label = { Text("Nama Warung") },
+                        label = { Text(tr("Nama Warung", "Store Name")) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
@@ -422,7 +424,7 @@ fun ReconciliationScreen(
                         OutlinedTextField(
                             value = editRouteDay,
                             onValueChange = { editRouteDay = it },
-                            label = { Text("Hari Rute") },
+                            label = { Text(tr("Hari Rute", "Route Day")) },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SupabaseGreen,
@@ -435,7 +437,7 @@ fun ReconciliationScreen(
                         OutlinedTextField(
                             value = editRouteOrder,
                             onValueChange = { editRouteOrder = it.filter { ch -> ch.isDigit() } },
-                            label = { Text("Urutan") },
+                            label = { Text(tr("Urutan", "Order")) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -451,7 +453,7 @@ fun ReconciliationScreen(
                         OutlinedTextField(
                             value = editPhone,
                             onValueChange = { editPhone = it },
-                            label = { Text("No. WA") },
+                            label = { Text(tr("No. WA", "Phone / WA")) },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SupabaseGreen,
@@ -464,7 +466,7 @@ fun ReconciliationScreen(
                         OutlinedTextField(
                             value = editAddress,
                             onValueChange = { editAddress = it },
-                            label = { Text("Alamat") },
+                            label = { Text(tr("Alamat", "Address")) },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SupabaseGreen,
@@ -515,12 +517,12 @@ fun ReconciliationScreen(
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114))
                 ) {
-                    Text("Simpan", fontWeight = FontWeight.Bold)
+                    Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditWarungInfoDialog = false }) {
-                    Text("Batal", color = TextSecondaryDark)
+                    Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
                 }
             }
         )
@@ -560,7 +562,7 @@ private fun MinimalistVisitHeaderBar(
                     .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
                 Text(
-                    text = "#$routeOrder • $routeDay",
+                    text = "#$routeOrder • ${trDay(routeDay)}",
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = SupabaseGreen
@@ -568,7 +570,7 @@ private fun MinimalistVisitHeaderBar(
             }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = address.ifBlank { "Info Warung" },
+                text = address.ifBlank { tr("Info Warung", "Store Info") },
                 fontSize = 11.5.sp,
                 color = TextSecondaryDark,
                 maxLines = 1,
@@ -578,7 +580,7 @@ private fun MinimalistVisitHeaderBar(
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 Icons.Default.Edit,
-                contentDescription = "Edit Info",
+                contentDescription = tr("Edit Info", "Edit Info"),
                 tint = TextMutedDark,
                 modifier = Modifier.size(12.dp)
             )
@@ -610,7 +612,7 @@ private fun MinimalistVisitHeaderBar(
                     if (photoUri != null) {
                         AsyncImage(
                             model = photoUri,
-                            contentDescription = "Foto Rak",
+                            contentDescription = tr("Foto Rak", "Shelf Photo"),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(15.dp)
@@ -619,14 +621,14 @@ private fun MinimalistVisitHeaderBar(
                     } else {
                         Icon(
                             Icons.Default.CameraAlt,
-                            contentDescription = "Foto Rak",
+                            contentDescription = tr("Foto Rak", "Shelf Photo"),
                             tint = TextSecondaryDark,
                             modifier = Modifier.size(12.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (photoUri != null) "Foto ✓" else "Foto",
+                        text = if (photoUri != null) tr("Foto ✓", "Photo ✓") else tr("Foto", "Photo"),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (photoUri != null) SupabaseGreen else TextSecondaryDark
@@ -651,7 +653,7 @@ private fun MinimalistVisitHeaderBar(
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
-                        text = "Produk ($itemCount)",
+                        text = tr("Produk ($itemCount)", "Products ($itemCount)"),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = SupabaseGreen
@@ -730,7 +732,7 @@ private fun ReconciliationItemCard(
                             Spacer(modifier = Modifier.width(3.dp))
                             Icon(
                                 Icons.Default.Edit,
-                                contentDescription = "Ubah Harga",
+                                contentDescription = tr("Ubah Harga", "Edit Price"),
                                 tint = if (item.hasCustomPrice) AmberWarning else TextMutedDark,
                                 modifier = Modifier.size(9.dp)
                             )
@@ -745,14 +747,14 @@ private fun ReconciliationItemCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Lalu: ${p.formatPackAndPieces(item.previousStock)}",
+                                text = tr("Lalu: ${p.formatPackAndPieces(item.previousStock)}", "Prev: ${p.formatPackAndPieces(item.previousStock)}"),
                                 fontSize = 10.sp,
                                 color = TextSecondaryDark
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Icon(
                                 Icons.Default.Edit,
-                                contentDescription = "Edit Lalu",
+                                contentDescription = tr("Edit Lalu", "Edit Previous"),
                                 tint = SupabaseGreen,
                                 modifier = Modifier.size(9.dp)
                             )
@@ -770,7 +772,7 @@ private fun ReconciliationItemCard(
                             color = if (item.subtotal > 0) SupabaseGreen else TextMutedDark
                         )
                         Text(
-                            text = "Laku ${item.soldQuantity} ${p.unit_small}",
+                            text = tr("Laku ${item.soldQuantity} ${p.unit_small}", "Sold ${item.soldQuantity} ${p.unit_small}"),
                             fontSize = 10.sp,
                             color = if (item.soldQuantity > 0) SupabaseGreen else TextMutedDark
                         )
@@ -782,7 +784,7 @@ private fun ReconciliationItemCard(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Hapus",
+                            contentDescription = tr("Hapus", "Remove"),
                             tint = TextMutedDark,
                             modifier = Modifier.size(13.dp)
                         )
@@ -807,7 +809,7 @@ private fun ReconciliationItemCard(
                         .padding(horizontal = 3.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "Sisa:",
+                        text = tr("Sisa:", "Rem:"),
                         fontSize = 11.sp,
                         color = TextSecondaryDark,
                         modifier = Modifier.padding(start = 3.dp, end = 3.dp)
@@ -819,7 +821,7 @@ private fun ReconciliationItemCard(
                             .clickable { if (item.remainingStock > 0) onRemainingChanged(item.remainingStock - 1) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Kurang", tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Remove, contentDescription = tr("Kurang", "Decrease"), tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
                     }
 
                     Box(
@@ -843,7 +845,7 @@ private fun ReconciliationItemCard(
                             .clickable { onRemainingChanged(item.remainingStock + 1) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah", tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Add, contentDescription = tr("Tambah", "Increase"), tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
                     }
                 }
 
@@ -856,7 +858,7 @@ private fun ReconciliationItemCard(
                         .padding(horizontal = 3.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "Titip:",
+                        text = tr("Titip:", "Add:"),
                         fontSize = 11.sp,
                         color = TextSecondaryDark,
                         modifier = Modifier.padding(start = 3.dp, end = 3.dp)
@@ -868,7 +870,7 @@ private fun ReconciliationItemCard(
                             .clickable { if (item.addedPacks > 0) onAddedPacksChanged(item.addedPacks - 1) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Kurang", tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Remove, contentDescription = tr("Kurang", "Decrease"), tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
                     }
 
                     Box(
@@ -892,7 +894,7 @@ private fun ReconciliationItemCard(
                             .clickable { onAddedPacksChanged(item.addedPacks + 1) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah", tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Add, contentDescription = tr("Tambah", "Increase"), tint = TextPrimaryDark, modifier = Modifier.size(13.dp))
                     }
                 }
 
@@ -920,7 +922,7 @@ private fun ReconciliationItemCard(
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = "Tukar",
+                            text = tr("Tukar", "Swap"),
                             fontSize = 10.5.sp,
                             fontWeight = if (item.isAutoSwapReturned) FontWeight.Bold else FontWeight.Normal,
                             color = if (item.isAutoSwapReturned) SupabaseGreen else TextSecondaryDark
@@ -954,9 +956,9 @@ private fun ReconciliationItemCard(
             title = {
                 Text(
                     text = when {
-                        isSisa -> "Sisa • ${p.name}"
-                        isLalu -> "Titip Lalu • ${p.name}"
-                        else -> "Titip Baru • ${p.name}"
+                        isSisa -> tr("Sisa • ${p.name}", "Remaining • ${p.name}")
+                        isLalu -> tr("Titip Lalu • ${p.name}", "Previous Stock • ${p.name}")
+                        else -> tr("Titip Baru • ${p.name}", "Add Consignment • ${p.name}")
                     },
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
@@ -971,7 +973,7 @@ private fun ReconciliationItemCard(
                     OutlinedTextField(
                         value = inputStr,
                         onValueChange = { inputStr = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Jumlah ($unit)") },
+                        label = { Text(tr("Jumlah ($unit)", "Quantity ($unit)")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -1029,12 +1031,12 @@ private fun ReconciliationItemCard(
                     colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Simpan", fontWeight = FontWeight.Bold)
+                    Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDirectInputFor = null }) {
-                    Text("Batal", color = TextSecondaryDark)
+                    Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
                 }
             }
         )
@@ -1061,14 +1063,14 @@ private fun ReconciliationItemCard(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Harga Warung • ${p.name}",
+                            text = tr("Harga Warung • ${p.name}", "Store Price • ${p.name}"),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryDark,
                             maxLines = 1
                         )
                         Text(
-                            text = "Standar: Rp %,.0f/%s".format(p.selling_price_pack, p.unit_big),
+                            text = tr("Standar: Rp %,.0f/%s", "Standard: Rp %,.0f/%s").format(p.selling_price_pack, p.unit_big),
                             fontSize = 11.sp,
                             color = TextSecondaryDark
                         )
@@ -1147,12 +1149,12 @@ private fun ReconciliationItemCard(
                     colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Simpan", fontWeight = FontWeight.Bold)
+                    Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPriceEditDialog = false }) {
-                    Text("Batal", color = TextSecondaryDark)
+                    Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
                 }
             }
         )
@@ -1168,11 +1170,11 @@ private fun ReconciliationItemCard(
             properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
-                Text("Hapus Produk?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                Text(tr("Hapus Produk?", "Remove Product?"), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
             },
             text = {
                 Text(
-                    "Hapus '${p.name}' dari daftar titipan warung ini?",
+                    tr("Hapus '${p.name}' dari daftar titipan warung ini?", "Remove '${p.name}' from this store's consignment list?"),
                     fontSize = 12.sp,
                     color = TextSecondaryDark
                 )
@@ -1185,12 +1187,12 @@ private fun ReconciliationItemCard(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RoseError)
                 ) {
-                    Text("Hapus", fontSize = 12.sp, color = Color.White)
+                    Text(tr("Hapus", "Remove"), fontSize = 12.sp, color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Batal", fontSize = 12.sp, color = TextSecondaryDark)
+                    Text(tr("Batal", "Cancel"), fontSize = 12.sp, color = TextSecondaryDark)
                 }
             }
         )
@@ -1227,13 +1229,15 @@ private fun SettlementCard(
             ) {
                 Column {
                     Text(
-                        text = "Total Tagihan",
+                        text = tr("Total Tagihan", "Total Bill"),
                         fontSize = 11.5.sp,
                         color = TextSecondaryDark
                     )
                     Text(
-                        text = "Laku $totalSoldQty pcs • Titip +$totalAddedPacks pack" +
-                                (if (totalReturned > 0) " • Retur $totalReturned" else ""),
+                        text = tr(
+                            "Laku $totalSoldQty pcs • Titip +$totalAddedPacks pack" + (if (totalReturned > 0) " • Retur $totalReturned" else ""),
+                            "Sold $totalSoldQty pcs • Added +$totalAddedPacks pack" + (if (totalReturned > 0) " • Returned $totalReturned" else "")
+                        ),
                         fontSize = 10.5.sp,
                         color = TextMutedDark
                     )
@@ -1255,7 +1259,7 @@ private fun SettlementCard(
                     val clean = str.filter { it.isDigit() }
                     onAmountPaidChanged(clean.toDoubleOrNull() ?: 0.0)
                 },
-                label = { Text("Uang Diterima (Rp)") },
+                label = { Text(tr("Uang Diterima (Rp)", "Cash Received (Rp)")) },
                 placeholder = { Text("0") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -1264,7 +1268,7 @@ private fun SettlementCard(
                         onClick = onSetExactAmount,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
-                        Text("Uang Pas", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SupabaseGreen)
+                        Text(tr("Uang Pas", "Exact Cash"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SupabaseGreen)
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
@@ -1289,15 +1293,15 @@ private fun SettlementCard(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     QuickChipButton(
-                        text = "+20 rb",
+                        text = tr("+20 rb", "+20k"),
                         onClick = { onAmountPaidChanged(amountPaid + 20000.0) }
                     )
                     QuickChipButton(
-                        text = "+50 rb",
+                        text = tr("+50 rb", "+50k"),
                         onClick = { onAmountPaidChanged(amountPaid + 50000.0) }
                     )
                     QuickChipButton(
-                        text = "+100 rb",
+                        text = tr("+100 rb", "+100k"),
                         onClick = { onAmountPaidChanged(amountPaid + 100000.0) }
                     )
                 }
@@ -1309,9 +1313,9 @@ private fun SettlementCard(
                         else -> AmberWarning
                     }
                     val statusText = when {
-                        changeOrDebt == 0.0 -> "LUNAS"
-                        changeOrDebt > 0 -> "Kembali Rp %,.0f".format(changeOrDebt)
-                        else -> "Kurang Rp %,.0f".format(-changeOrDebt)
+                        changeOrDebt == 0.0 -> tr("LUNAS", "PAID IN FULL")
+                        changeOrDebt > 0 -> tr("Kembali Rp %,.0f", "Change Rp %,.0f").format(changeOrDebt)
+                        else -> tr("Kurang Rp %,.0f", "Shortfall Rp %,.0f").format(-changeOrDebt)
                     }
                     Text(
                         text = statusText,
@@ -1328,7 +1332,7 @@ private fun SettlementCard(
             OutlinedTextField(
                 value = notes,
                 onValueChange = onNotesChanged,
-                label = { Text("Catatan (Opsional)") },
+                label = { Text(tr("Catatan (Opsional)", "Notes (Optional)")) },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = SupabaseGreen,
@@ -1398,7 +1402,7 @@ private fun SurfaceBottomBar(
                 ) {
                     Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Cetak Struk", fontWeight = FontWeight.Bold)
+                    Text(tr("Cetak Struk", "Print Receipt"), fontWeight = FontWeight.Bold)
                 }
             } else {
                 OutlinedButton(
@@ -1411,7 +1415,7 @@ private fun SurfaceBottomBar(
                 ) {
                     Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(15.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Simpan", fontSize = 12.sp)
+                    Text(tr("Simpan", "Save"), fontSize = 12.sp)
                 }
 
                 Button(
@@ -1433,7 +1437,7 @@ private fun SurfaceBottomBar(
                     } else {
                         Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Simpan & Cetak", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("Simpan & Cetak", "Save & Print"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

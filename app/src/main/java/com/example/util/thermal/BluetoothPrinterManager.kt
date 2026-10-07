@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.os.Build
+import com.example.ui.theme.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.OutputStream
@@ -56,15 +57,15 @@ class BluetoothPrinterManager(private val context: Context) {
     @SuppressLint("MissingPermission")
     suspend fun printData(deviceAddress: String, data: ByteArray): PrintResult = withContext(Dispatchers.IO) {
         val adapter = getBluetoothAdapter()
-            ?: return@withContext PrintResult.Error("Bluetooth tidak didukung pada perangkat ini.")
+            ?: return@withContext PrintResult.Error(tr("Bluetooth tidak didukung pada perangkat ini.", "Bluetooth is not supported on this device."))
 
         if (!adapter.isEnabled) {
-            return@withContext PrintResult.Error("Bluetooth dinonaktifkan. Silakan aktifkan Bluetooth.")
+            return@withContext PrintResult.Error(tr("Bluetooth dinonaktifkan. Silakan aktifkan Bluetooth.", "Bluetooth is disabled. Please enable Bluetooth."))
         }
 
         try {
             val device: BluetoothDevice = adapter.getRemoteDevice(deviceAddress)
-                ?: return@withContext PrintResult.Error("Perangkat printer tidak ditemukan ($deviceAddress).")
+                ?: return@withContext PrintResult.Error(tr("Perangkat printer tidak ditemukan ($deviceAddress).", "Printer device not found ($deviceAddress)."))
 
             // Cancel discovery before connecting
             try {
@@ -92,9 +93,14 @@ class BluetoothPrinterManager(private val context: Context) {
 
             PrintResult.Success
         } catch (e: SecurityException) {
-            PrintResult.Error("Izin Bluetooth belum diberikan: ${e.localizedMessage}")
+            PrintResult.Error(tr("Izin Bluetooth belum diberikan: ${e.localizedMessage}", "Bluetooth permission not granted: ${e.localizedMessage}"))
         } catch (e: Exception) {
-            PrintResult.Error("Gagal mencetak: ${e.localizedMessage ?: "Koneksi ke printer terputus."}")
+            PrintResult.Error(
+                tr(
+                    "Gagal mencetak: ${e.localizedMessage ?: "Koneksi ke printer terputus."}",
+                    "Print failed: ${e.localizedMessage ?: "Printer connection lost."}"
+                )
+            )
         }
     }
 

@@ -79,6 +79,7 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
 import com.example.ui.viewmodel.FinanceTab
 import com.example.ui.viewmodel.FinancialViewModel
 import java.text.SimpleDateFormat
@@ -114,7 +115,7 @@ fun FinancialScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Buku Kas",
+                    text = tr("Buku Kas", "Cashbook"),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark
@@ -122,7 +123,10 @@ fun FinancialScreen(
             }
 
             // Segregated Tabs: Kas Bisnis vs Kas Pribadi
-            val tabs = listOf("Kas Bisnis", "Kas Pribadi")
+            val tabs = listOf(
+                tr("Kas Bisnis", "Business Cash"),
+                tr("Kas Pribadi", "Personal Cash")
+            )
             val selectedIndex = if (uiState.selectedTab == FinanceTab.BUSINESS) 0 else 1
 
             TabRow(
@@ -195,7 +199,7 @@ fun FinancialScreen(
                             ) {
                                 Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pengeluaran", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(tr("Pengeluaran", "Expense"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
 
                             Button(
@@ -213,14 +217,14 @@ fun FinancialScreen(
                             ) {
                                 Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pemasukan", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(tr("Pemasukan", "Income"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
 
                     item {
                         Text(
-                            text = "Riwayat Transaksi",
+                            text = tr("Riwayat Transaksi", "Transaction History"),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextSecondaryDark,
@@ -230,7 +234,7 @@ fun FinancialScreen(
 
                     if (uiState.businessRecords.isEmpty()) {
                         item {
-                            EmptyRecordsCard(text = "Belum ada transaksi.")
+                            EmptyRecordsCard(text = tr("Belum ada transaksi.", "No transactions yet."))
                         }
                     } else {
                         items(uiState.businessRecords, key = { it.id }) { record ->
@@ -267,7 +271,7 @@ fun FinancialScreen(
                             ) {
                                 Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pengeluaran", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(tr("Pengeluaran", "Expense"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
 
                             Button(
@@ -285,14 +289,14 @@ fun FinancialScreen(
                             ) {
                                 Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pemasukan", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(tr("Pemasukan", "Income"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
 
                     item {
                         Text(
-                            text = "Riwayat Transaksi",
+                            text = tr("Riwayat Transaksi", "Transaction History"),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextSecondaryDark,
@@ -302,7 +306,7 @@ fun FinancialScreen(
 
                     if (uiState.personalRecords.isEmpty()) {
                         item {
-                            EmptyRecordsCard(text = "Belum ada transaksi.")
+                            EmptyRecordsCard(text = tr("Belum ada transaksi.", "No transactions yet."))
                         }
                     } else {
                         items(uiState.personalRecords, key = { it.id }) { record ->
@@ -353,7 +357,7 @@ private fun BusinessPnLCard(summary: BusinessFinancialSummary) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Laba Rugi",
+                    text = tr("Laba Rugi", "Profit & Loss"),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp,
@@ -386,7 +390,7 @@ private fun BusinessPnLCard(summary: BusinessFinancialSummary) {
             ) {
                 Column {
                     Text(
-                        text = "Laba Bersih",
+                        text = tr("Laba Bersih", "Net Profit"),
                         fontSize = 12.sp,
                         color = TextSecondaryDark
                     )
@@ -403,11 +407,11 @@ private fun BusinessPnLCard(summary: BusinessFinancialSummary) {
             Spacer(modifier = Modifier.height(12.dp))
 
             // Breakdown
-            FinanceRow(label = "Penjualan", value = "Rp %,.0f".format(summary.totalSalesRevenue))
-            FinanceRow(label = "HPP Modal", value = "- Rp %,.0f".format(summary.totalCostOfGoodsSold), valueColor = AmberWarning)
+            FinanceRow(label = tr("Penjualan", "Sales Revenue"), value = "Rp %,.0f".format(summary.totalSalesRevenue))
+            FinanceRow(label = tr("HPP Modal", "Cost of Goods Sold (COGS)"), value = "- Rp %,.0f".format(summary.totalCostOfGoodsSold), valueColor = AmberWarning)
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = CharcoalBorder)
-            FinanceRow(label = "Laba Kotor", value = "Rp %,.0f".format(summary.grossProfit), isBold = true)
-            FinanceRow(label = "Operasional", value = "- Rp %,.0f".format(summary.operationalExpenses), valueColor = RoseError)
+            FinanceRow(label = tr("Laba Kotor", "Gross Profit"), value = "Rp %,.0f".format(summary.grossProfit), isBold = true)
+            FinanceRow(label = tr("Operasional", "Operational Expenses"), value = "- Rp %,.0f".format(summary.operationalExpenses), valueColor = RoseError)
         }
     }
 }
@@ -423,7 +427,7 @@ private fun PersonalBalanceCard(summary: PersonalFinancialSummary) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Saldo Pribadi",
+                text = tr("Saldo Pribadi", "Personal Balance"),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.8.sp,
@@ -441,7 +445,7 @@ private fun PersonalBalanceCard(summary: PersonalFinancialSummary) {
             ) {
                 Column {
                     Text(
-                        text = "Saldo Kas",
+                        text = tr("Saldo Kas", "Cash Balance"),
                         fontSize = 12.sp,
                         color = TextSecondaryDark
                     )
@@ -457,8 +461,8 @@ private fun PersonalBalanceCard(summary: PersonalFinancialSummary) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            FinanceRow(label = "Pemasukan", value = "Rp %,.0f".format(summary.totalIncome), valueColor = SupabaseGreen)
-            FinanceRow(label = "Pengeluaran", value = "- Rp %,.0f".format(summary.totalExpense), valueColor = RoseError)
+            FinanceRow(label = tr("Pemasukan", "Total Income"), value = "Rp %,.0f".format(summary.totalIncome), valueColor = SupabaseGreen)
+            FinanceRow(label = tr("Pengeluaran", "Total Expense"), value = "- Rp %,.0f".format(summary.totalExpense), valueColor = RoseError)
         }
     }
 }
@@ -493,7 +497,8 @@ private fun RecordItemRow(
     onDelete: () -> Unit
 ) {
     val isExpense = record.category.endsWith("EXPENSE")
-    val dateStr = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()).format(Date(record.transaction_date))
+    val dateLocale = if (com.example.ui.theme.isEnglishLanguageActive) Locale.ENGLISH else Locale.forLanguageTag("id-ID")
+    val dateStr = SimpleDateFormat("dd MMM, HH:mm", dateLocale).format(Date(record.transaction_date))
 
     Card(
         modifier = Modifier
@@ -557,7 +562,7 @@ private fun RecordItemRow(
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Hapus",
+                        contentDescription = tr("Hapus", "Delete"),
                         tint = TextMutedDark,
                         modifier = Modifier.size(16.dp)
                     )
@@ -568,10 +573,10 @@ private fun RecordItemRow(
 }
 
 private fun formatCategoryLabel(cat: String): String = when (cat) {
-    FinancialCategory.BUSINESS_INCOME -> "Setoran Usaha"
-    FinancialCategory.BUSINESS_EXPENSE -> "Beban Usaha"
-    FinancialCategory.PERSONAL_INCOME -> "Pemasukan Pribadi"
-    FinancialCategory.PERSONAL_EXPENSE -> "Pengeluaran Pribadi"
+    FinancialCategory.BUSINESS_INCOME -> tr("Setoran Usaha", "Business Income")
+    FinancialCategory.BUSINESS_EXPENSE -> tr("Beban Usaha", "Business Expense")
+    FinancialCategory.PERSONAL_INCOME -> tr("Pemasukan Pribadi", "Personal Income")
+    FinancialCategory.PERSONAL_EXPENSE -> tr("Pengeluaran Pribadi", "Personal Expense")
     else -> cat
 }
 
@@ -599,8 +604,8 @@ private fun AddFinancialRecordDialog(
     var amountStr by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
-    val title = if (isExpense) "Catat Pengeluaran" else "Catat Pemasukan"
-    val sampleDesc = if (isExpense) "Bensin, operasional, makan..." else "Pendapatan, komisi..."
+    val title = if (isExpense) tr("Catat Pengeluaran", "Record Expense") else tr("Catat Pemasukan", "Record Income")
+    val sampleDesc = if (isExpense) tr("Bensin, operasional, makan...", "Fuel, operational, meals...") else tr("Pendapatan, komisi...", "Revenue, commission...")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -628,7 +633,7 @@ private fun AddFinancialRecordDialog(
                 OutlinedTextField(
                     value = amountStr,
                     onValueChange = { amountStr = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Nominal (Rp) *") },
+                    label = { Text(tr("Nominal (Rp) *", "Amount (Rp) *")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -643,7 +648,7 @@ private fun AddFinancialRecordDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Keterangan *") },
+                    label = { Text(tr("Keterangan *", "Description *")) },
                     placeholder = { Text(sampleDesc) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SupabaseGreen,
@@ -669,12 +674,12 @@ private fun AddFinancialRecordDialog(
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Simpan", fontWeight = FontWeight.Bold)
+                Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal", color = TextSecondaryDark)
+                Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
             }
         }
     )

@@ -134,7 +134,7 @@ data class PersonalFinancialSummary(
 data class ReceiptData(
     val headerId: Long,
     val businessName: String = "CONSIGNTRACK DISTRIBUSI",
-    val businessSub: String = "Distribusi & Titip Jual Makanan Ringan",
+    val businessSub: String = com.example.ui.theme.tr("Distribusi & Titip Jual Makanan Ringan", "Snack Distribution & Consignment"),
     val businessPhone: String = "0812-9988-7766",
     val transactionDate: Long,
     val customerName: String,

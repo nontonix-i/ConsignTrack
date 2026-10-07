@@ -8,6 +8,35 @@ import androidx.compose.ui.graphics.Color
 // Global reactive flag for instant Dark / Light theme switching across all screens
 var isDarkThemeActive by mutableStateOf(true)
 
+// Global reactive flag for instant Indonesian / English language switching across all screens & dialogs
+var isEnglishLanguageActive by mutableStateOf(false)
+
+/**
+ * Reactive bilingual string selector. Automatically triggers Compose recomposition when language changes.
+ */
+fun tr(id: String, en: String): String = if (isEnglishLanguageActive) en else id
+
+/**
+ * Translates canonical Indonesian route day names ("Semua", "Senin".."Minggu") to English for UI display
+ * while preserving the underlying database route_day keys.
+ */
+fun trDay(day: String, short: Boolean = false): String {
+    if (!isEnglishLanguageActive) {
+        return if (short && day != "Semua") day.take(3) else day
+    }
+    return when (day.trim().lowercase()) {
+        "semua", "all" -> "All"
+        "senin" -> if (short) "Mon" else "Monday"
+        "selasa" -> if (short) "Tue" else "Tuesday"
+        "rabu" -> if (short) "Wed" else "Wednesday"
+        "kamis" -> if (short) "Thu" else "Thursday"
+        "jumat", "jum'at" -> if (short) "Fri" else "Friday"
+        "sabtu" -> if (short) "Sat" else "Saturday"
+        "minggu" -> if (short) "Sun" else "Sunday"
+        else -> if (short) day.take(3) else day
+    }
+}
+
 // Supabase-inspired Color Palette
 // Signature Emerald
 val SupabaseGreen: Color

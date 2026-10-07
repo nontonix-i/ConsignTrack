@@ -107,6 +107,7 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
@@ -183,7 +184,7 @@ object ImagePickerHelper {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotoChooserBottomSheet(
-    title: String = "Pilih Sumber Foto",
+    title: String = tr("Pilih Sumber Foto", "Choose Photo Source"),
     hasExistingPhoto: Boolean = false,
     existingPhotoUri: String? = null,
     onPhotoSelected: (uriString: String) -> Unit,
@@ -251,13 +252,13 @@ fun PhotoChooserBottomSheet(
                         color = TextPrimaryDark
                     )
                     Text(
-                        text = "Kamera bawaan aplikasi • Cepat & tanpa suara",
+                        text = tr("Kamera bawaan aplikasi • Cepat & tanpa suara", "Built-in app camera • Fast & silent"),
                         fontSize = 11.sp,
                         color = SupabaseGreen
                     )
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextSecondaryDark)
+                    Icon(Icons.Default.Close, contentDescription = tr("Tutup", "Close"), tint = TextSecondaryDark)
                 }
             }
 
@@ -273,7 +274,7 @@ fun PhotoChooserBottomSheet(
                 ) {
                     AsyncImage(
                         model = existingPhotoUri,
-                        contentDescription = "Foto Saat Ini",
+                        contentDescription = tr("Foto Saat Ini", "Current Photo"),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -285,7 +286,7 @@ fun PhotoChooserBottomSheet(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "Foto Tersimpan",
+                            text = tr("Foto Tersimpan", "Saved Photo"),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = SupabaseGreen
@@ -300,9 +301,9 @@ fun PhotoChooserBottomSheet(
             PhotoSourceOption(
                 icon = Icons.Default.CameraAlt,
                 iconTint = SupabaseGreen,
-                title = "Kamera Cepat In-App (Tanpa Suara)",
-                subtitle = "Jepret instan langsung di dalam aplikasi tanpa suara kamera",
-                badgeText = "INSTAN",
+                title = tr("Kamera Cepat In-App (Tanpa Suara)", "Fast In-App Camera (Silent)"),
+                subtitle = tr("Jepret instan langsung di dalam aplikasi tanpa suara kamera", "Instant capture directly inside the app with no shutter sound"),
+                badgeText = tr("INSTAN", "INSTANT"),
                 onClick = { showInAppCamera = true },
                 modifier = Modifier.testTag("open_in_app_camera_button")
             )
@@ -313,8 +314,8 @@ fun PhotoChooserBottomSheet(
             PhotoSourceOption(
                 icon = Icons.Default.PhotoLibrary,
                 iconTint = Color(0xFF38BDF8),
-                title = "Pilih dari Galeri Foto",
-                subtitle = "Ambil dari foto yang sudah ada di HP",
+                title = tr("Pilih dari Galeri Foto", "Choose from Photo Gallery"),
+                subtitle = tr("Ambil dari foto yang sudah ada di HP", "Pick from existing photos on your phone"),
                 onClick = {
                     galleryLauncher.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -329,8 +330,8 @@ fun PhotoChooserBottomSheet(
                 PhotoSourceOption(
                     icon = Icons.Default.Delete,
                     iconTint = RoseError,
-                    title = "Hapus Foto",
-                    subtitle = "Hapus foto yang tersimpan saat ini",
+                    title = tr("Hapus Foto", "Delete Photo"),
+                    subtitle = tr("Hapus foto yang tersimpan saat ini", "Remove the currently saved photo"),
                     onClick = {
                         onDeletePhoto()
                         onDismiss()
@@ -350,7 +351,7 @@ fun PhotoChooserBottomSheet(
  */
 @Composable
 fun InAppCameraDialog(
-    title: String = "Kamera In-App",
+    title: String = tr("Kamera In-App", "In-App Camera"),
     onPhotoCaptured: (String) -> Unit,
     onOpenGallery: () -> Unit,
     onDismiss: () -> Unit
@@ -581,14 +582,17 @@ fun InAppCameraDialog(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Izin Kamera Diperlukan",
+                        text = tr("Izin Kamera Diperlukan", "Camera Permission Required"),
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimaryDark
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Izinkan akses kamera untuk mengambil foto warung dan rak barang secara cepat & tanpa suara langsung di dalam aplikasi.",
+                        text = tr(
+                            "Izinkan akses kamera untuk mengambil foto warung dan rak barang secara cepat & tanpa suara langsung di dalam aplikasi.",
+                            "Allow camera access to capture store and shelf photos quickly & silently inside the app."
+                        ),
                         fontSize = 12.5.sp,
                         color = TextSecondaryDark
                     )
@@ -599,7 +603,7 @@ fun InAppCameraDialog(
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondaryDark)
                         ) {
-                            Text("Batal")
+                            Text(tr("Batal", "Cancel"))
                         }
                         Button(
                             onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
@@ -609,7 +613,7 @@ fun InAppCameraDialog(
                                 contentColor = Color(0xFF042114)
                             )
                         ) {
-                            Text("Izinkan Kamera", fontWeight = FontWeight.Bold)
+                            Text(tr("Izinkan Kamera", "Allow Camera"), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -619,7 +623,7 @@ fun InAppCameraDialog(
                 Box(modifier = Modifier.fillMaxSize()) {
                     Image(
                         bitmap = previewBmp.asImageBitmap(),
-                        contentDescription = "Hasil Foto",
+                        contentDescription = tr("Hasil Foto", "Captured Photo"),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -635,7 +639,7 @@ fun InAppCameraDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Tinjau Hasil Foto",
+                            text = tr("Tinjau Hasil Foto", "Review Captured Photo"),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -644,7 +648,7 @@ fun InAppCameraDialog(
                             onClick = { capturedPreviewBitmap = null },
                             modifier = Modifier.size(32.dp)
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
+                            Icon(Icons.Default.Close, contentDescription = tr("Tutup", "Close"), tint = Color.White)
                         }
                     }
 
@@ -668,7 +672,7 @@ fun InAppCameraDialog(
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Foto Ulang", fontWeight = FontWeight.SemiBold)
+                            Text(tr("Foto Ulang", "Retake"), fontWeight = FontWeight.SemiBold)
                         }
 
                         Button(
@@ -701,7 +705,7 @@ fun InAppCameraDialog(
                             } else {
                                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Gunakan Foto", fontWeight = FontWeight.Bold)
+                                Text(tr("Gunakan Foto", "Use Photo"), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -774,7 +778,7 @@ fun InAppCameraDialog(
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Text(
-                                    text = "Tanpa Suara • Ketuk layar untuk fokus",
+                                    text = tr("Tanpa Suara • Ketuk layar untuk fokus", "Silent • Tap screen to focus"),
                                     fontSize = 10.5.sp,
                                     color = SupabaseGreen
                                 )
@@ -804,7 +808,7 @@ fun InAppCameraDialog(
                                 ) {
                                     Icon(
                                         if (isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                                        contentDescription = "Lampu Senter",
+                                        contentDescription = tr("Lampu Senter", "Flashlight"),
                                         tint = if (isTorchOn) AmberWarning else Color.White,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -820,7 +824,7 @@ fun InAppCameraDialog(
                             ) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Tutup Kamera",
+                                    contentDescription = tr("Tutup Kamera", "Close Camera"),
                                     tint = Color.White,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -862,7 +866,7 @@ fun InAppCameraDialog(
                                     )
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
-                                        text = "Langsung Simpan",
+                                        text = tr("Langsung Simpan", "Instant Save"),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (instantSaveMode) Color(0xFF042114) else TextSecondaryDark
@@ -878,7 +882,7 @@ fun InAppCameraDialog(
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "Tinjau Dulu",
+                                    text = tr("Tinjau Dulu", "Review First"),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (!instantSaveMode) Color(0xFF042114) else TextSecondaryDark
@@ -908,13 +912,13 @@ fun InAppCameraDialog(
                                 ) {
                                     Icon(
                                         Icons.Default.PhotoLibrary,
-                                        contentDescription = "Pilih dari Galeri",
+                                        contentDescription = tr("Pilih dari Galeri", "Choose from Gallery"),
                                         tint = Color(0xFF38BDF8),
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Galeri", fontSize = 10.sp, color = TextSecondaryDark)
+                                Text(tr("Galeri", "Gallery"), fontSize = 10.sp, color = TextSecondaryDark)
                             }
 
                             // Center: Fast Silent Shutter Button
@@ -939,7 +943,7 @@ fun InAppCameraDialog(
                                 } else {
                                     Icon(
                                         Icons.Default.CameraAlt,
-                                        contentDescription = "Ambil Foto Tanpa Suara",
+                                        contentDescription = tr("Ambil Foto Tanpa Suara", "Take Silent Photo"),
                                         tint = Color(0xFF042114),
                                         modifier = Modifier.size(28.dp)
                                     )
@@ -966,13 +970,13 @@ fun InAppCameraDialog(
                                 ) {
                                     Icon(
                                         Icons.Default.Cameraswitch,
-                                        contentDescription = "Putar Kamera",
+                                        contentDescription = tr("Putar Kamera", "Switch Camera"),
                                         tint = TextPrimaryDark,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Putar", fontSize = 10.sp, color = TextSecondaryDark)
+                                Text(tr("Putar", "Flip"), fontSize = 10.sp, color = TextSecondaryDark)
                             }
                         }
                     }

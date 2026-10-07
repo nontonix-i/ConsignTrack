@@ -65,6 +65,7 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
 import com.example.ui.viewmodel.ProductViewModel
 import com.example.ui.viewmodel.ProductWithStock
 
@@ -88,7 +89,7 @@ fun ProductCatalogScreen(
                 contentColor = Color(0xFF042114),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Produk")
+                Icon(Icons.Default.Add, contentDescription = tr("Tambah Produk", "Add Product"))
             }
         }
     ) { innerPadding ->
@@ -107,7 +108,7 @@ fun ProductCatalogScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Katalog Produk",
+                    text = tr("Katalog Produk", "Product Catalog"),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark
@@ -120,7 +121,7 @@ fun ProductCatalogScreen(
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "${uiState.products.size} Produk",
+                        text = tr("${uiState.products.size} Produk", "${uiState.products.size} Products"),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = SupabaseGreen
@@ -197,7 +198,10 @@ private fun ProductCard(
                         color = TextPrimaryDark
                     )
                     Text(
-                        text = "1 ${p.unit_big} = ${p.pieces_per_pack} ${p.unit_small} • Stok Aktif: ${p.formatPackAndPieces(item.totalConsignedStock)}",
+                        text = tr(
+                            "1 ${p.unit_big} = ${p.pieces_per_pack} ${p.unit_small} • Stok Aktif: ${p.formatPackAndPieces(item.totalConsignedStock)}",
+                            "1 ${p.unit_big} = ${p.pieces_per_pack} ${p.unit_small} • Active Stock: ${p.formatPackAndPieces(item.totalConsignedStock)}"
+                        ),
                         fontSize = 11.sp,
                         color = TextSecondaryDark
                     )
@@ -205,10 +209,10 @@ private fun ProductCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = SupabaseGreen, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = tr("Edit", "Edit"), tint = SupabaseGreen, modifier = Modifier.size(16.dp))
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = TextMutedDark, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, contentDescription = tr("Hapus", "Delete"), tint = TextMutedDark, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -224,15 +228,15 @@ private fun ProductCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Modal / ${p.unit_big}", fontSize = 10.sp, color = TextMutedDark)
+                    Text(tr("Modal / ${p.unit_big}", "Cost / ${p.unit_big}"), fontSize = 10.sp, color = TextMutedDark)
                     Text("Rp %,.0f".format(p.cost_price_pack), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondaryDark)
                 }
                 Column {
-                    Text("Jual / ${p.unit_big}", fontSize = 10.sp, color = TextMutedDark)
+                    Text(tr("Jual / ${p.unit_big}", "Sell / ${p.unit_big}"), fontSize = 10.sp, color = TextMutedDark)
                     Text("Rp %,.0f".format(p.selling_price_pack), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Laba / ${p.unit_big}", fontSize = 10.sp, color = TextMutedDark)
+                    Text(tr("Laba / ${p.unit_big}", "Profit / ${p.unit_big}"), fontSize = 10.sp, color = TextMutedDark)
                     Text(
                         "+Rp %,.0f (%.0f%%)".format(item.profitMarginPack, item.profitMarginPercentage),
                         fontSize = 12.sp,
@@ -275,7 +279,7 @@ private fun ProductMultiUnitDialog(
         containerColor = CharcoalSurface,
         title = {
             Text(
-                text = if (product == null) "Tambah Produk" else "Edit Produk",
+                text = if (product == null) tr("Tambah Produk", "Add Product") else tr("Edit Produk", "Edit Product"),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimaryDark
@@ -291,8 +295,8 @@ private fun ProductMultiUnitDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nama Produk *") },
-                    placeholder = { Text("Kerupuk Kaleng") },
+                    label = { Text(tr("Nama Produk *", "Product Name *")) },
+                    placeholder = { Text(tr("Kerupuk Kaleng", "Cassava Chips")) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SupabaseGreen,
@@ -311,7 +315,7 @@ private fun ProductMultiUnitDialog(
                     OutlinedTextField(
                         value = unitBig,
                         onValueChange = { unitBig = it },
-                        label = { Text("Satuan Besar") },
+                        label = { Text(tr("Satuan Besar", "Pack Unit")) },
                         placeholder = { Text("Pack") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -326,7 +330,7 @@ private fun ProductMultiUnitDialog(
                     OutlinedTextField(
                         value = unitSmall,
                         onValueChange = { unitSmall = it },
-                        label = { Text("Satuan Kecil") },
+                        label = { Text(tr("Satuan Kecil", "Small Unit")) },
                         placeholder = { Text("Pcs") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -341,7 +345,7 @@ private fun ProductMultiUnitDialog(
                     OutlinedTextField(
                         value = piecesPerPackStr,
                         onValueChange = { piecesPerPackStr = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Isi/Pack") },
+                        label = { Text(tr("Isi/Pack", "Pcs/Pack")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -362,7 +366,7 @@ private fun ProductMultiUnitDialog(
                     OutlinedTextField(
                         value = sellingPricePackStr,
                         onValueChange = { sellingPricePackStr = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Harga Jual / $unitBig") },
+                        label = { Text(tr("Harga Jual / $unitBig", "Sell Price / $unitBig")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -377,7 +381,7 @@ private fun ProductMultiUnitDialog(
                     OutlinedTextField(
                         value = costPricePackStr,
                         onValueChange = { costPricePackStr = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Harga Modal / $unitBig") },
+                        label = { Text(tr("Harga Modal / $unitBig", "Cost Price / $unitBig")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -401,13 +405,13 @@ private fun ProductMultiUnitDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Eceran: Rp %,.0f / %s".format(sellPcs, unitSmall),
+                        text = tr("Eceran: Rp %,.0f / %s", "Unit: Rp %,.0f / %s").format(sellPcs, unitSmall),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimaryDark
                     )
                     Text(
-                        text = "Laba: Rp %,.0f / %s".format(profitPack, unitBig),
+                        text = tr("Laba: Rp %,.0f / %s", "Profit: Rp %,.0f / %s").format(profitPack, unitBig),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = SupabaseGreen
@@ -428,12 +432,12 @@ private fun ProductMultiUnitDialog(
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Simpan", fontWeight = FontWeight.Bold)
+                Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal", color = TextSecondaryDark)
+                Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
             }
         }
     )

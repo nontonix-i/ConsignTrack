@@ -19,6 +19,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import com.example.ui.theme.tr
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -52,10 +53,10 @@ data class GpsFixInfo(
 
     val qualityLabel: String
         get() = when {
-            accuracyMeters <= 8f -> "Sangat Akurat"
-            accuracyMeters <= 20f -> "Akurat"
-            accuracyMeters <= 50f -> "Cukup"
-            else -> "Estimasi"
+            accuracyMeters <= 8f -> tr("Sangat Akurat", "Very Accurate")
+            accuracyMeters <= 20f -> tr("Akurat", "Accurate")
+            accuracyMeters <= 50f -> tr("Cukup", "Fair")
+            else -> tr("Estimasi", "Estimated")
         }
 
     val formattedAccuracy: String
@@ -158,11 +159,11 @@ object LocationHelper {
      * Human-readable label for the location provider (Fused GMaps vs Satelit GPS Offline vs Network).
      */
     fun getProviderDisplayLabel(location: Location?, isDeviceOnline: Boolean): String {
-        if (location == null) return if (isDeviceOnline) "Online GPS" else "Offline Satelit GPS"
+        if (location == null) return if (isDeviceOnline) "Online GPS" else tr("Offline Satelit GPS", "Offline Satellite GPS")
         val p = location.provider?.lowercase(Locale.ROOT).orEmpty()
         return when {
-            p.contains("fused") -> if (isDeviceOnline) "Fused GMaps" else "Fused Satelit"
-            p.contains("gps") -> if (isDeviceOnline) "GPS Satelit+" else "Satelit Offline"
+            p.contains("fused") -> if (isDeviceOnline) "Fused GMaps" else tr("Fused Satelit", "Fused Satellite")
+            p.contains("gps") -> if (isDeviceOnline) tr("GPS Satelit+", "Satellite GPS+") else tr("Satelit Offline", "Offline Satellite")
             p.contains("network") -> "Network/Wi-Fi"
             p.contains("passive") -> "GMaps Cache"
             else -> if (isDeviceOnline) "Multi-GPS" else "GPS Offline"
@@ -843,6 +844,76 @@ object LocationHelper {
         }
 
         return null
+    }
+
+    /**
+     * Generates a 3-character unique uppercase alphanumeric code (letters A-Z and digits 0-9, e.g., "ABY", "K7X")
+     * guaranteed not to collide with existing store codes.
+     */
+    fun generateUniqueWarungCode(existingNames: Collection<String> = emptyList()): String {
+        val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        val usedCodes = existingNames.mapNotNull { raw ->
+            val trimmed = raw.trim()
+            val prefix = trimmed.substringBefore(" - ").trim().uppercase(Locale.ROOT)
+            if (prefix.length == 3 && prefix.all { it.isLetterOrDigit() }) prefix else null
+        }.toSet()
+
+        repeat(200) {
+            val candidate = buildString(3) {
+                // Ensure mix of letters/digits or clean 3-char code like "ABY" or "A7K"
+                append(alphabet.random())
+                append(alphabet.random())
+                append(alphabet.random())
+            }
+            if (candidate !in usedCodes) {
+                return candidate
+            }
+        }
+        return "W" + (10..99).random().toString()
+    }
+
+    /**
+     * Formats quick auto-add warung name using 3-char unique code + either Latitude or Longitude.
+     * Example: "ABY - -6.914744" or "ABY - 107.609810"
+     */
+    fun formatWarungAutoCoordName(
+        uniqueCode: String,
+        latitude: Double?,
+        longitude: Double?,
+        useLongitude: Boolean = false
+    ): String {
+        val cleanCode = uniqueCode.trim().uppercase(Locale.ROOT).ifBlank { generateUniqueWarungCode() }
+        val latValid = latitude != null && !latitude.isNaN() && abs(latitude) > 0.00001
+        val lngValid = longitude != null && !longitude.isNaN() && abs(longitude) > 0.00001
+
+        val coordPart = when {
+            useLongitude && lngValid -> "%.6f".format(Locale.US, longitude)
+            !useLongitude && latValid -> "%.6f".format(Locale.US, latitude)
+            latValid -> "%.6f".format(Locale.US, latitude)
+            lngValid -> "%.6f".format(Locale.US, longitude)
+            else -> "GPS"
+        }
+        return "$cleanCode - $coordPart"
+    }
+
+    fun formatWarungAutoCoordNameFromStr(
+        uniqueCode: String,
+        latitudeStr: String,
+        longitudeStr: String,
+        useLongitude: Boolean = false
+    ): String {
+        val lat = latitudeStr.trim().toDoubleOrNull()
+        val lng = longitudeStr.trim().toDoubleOrNull()
+        if (lat != null || lng != null) {
+            return formatWarungAutoCoordName(uniqueCode, lat, lng, useLongitude)
+        }
+        val cleanCode = uniqueCode.trim().uppercase(Locale.ROOT).ifBlank { generateUniqueWarungCode() }
+        val rawCoord = if (useLongitude) {
+            longitudeStr.trim().ifBlank { latitudeStr.trim() }
+        } else {
+            latitudeStr.trim().ifBlank { longitudeStr.trim() }
+        }
+        return if (rawCoord.isNotBlank()) "$cleanCode - $rawCoord" else "$cleanCode - GPS"
     }
 
     /**

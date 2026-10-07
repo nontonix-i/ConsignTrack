@@ -67,6 +67,7 @@ import com.example.ui.theme.ConsignTrackTheme
 import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.isEnglishLanguageActive
 import com.example.ui.viewmodel.AnalyticsViewModel
 import com.example.ui.viewmodel.AppLanguage
 import com.example.ui.viewmodel.AppThemeMode
@@ -131,6 +132,7 @@ fun MainApp(
 ) {
     val analyticsState by analyticsViewModel.uiState.collectAsStateWithLifecycle()
     val isEnglish = analyticsState.language == AppLanguage.EN
+    isEnglishLanguageActive = isEnglish
 
     var selectedTab by rememberSaveable { mutableStateOf(MainNavTab.ROUTES) }
     var showGraphicsAnalysis by rememberSaveable { mutableStateOf(false) }

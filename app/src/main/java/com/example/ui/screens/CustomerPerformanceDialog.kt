@@ -64,6 +64,8 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.isEnglishLanguageActive
+import com.example.ui.theme.tr
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -99,7 +101,7 @@ fun CustomerPerformanceDialog(
                 ) {
                     Column {
                         Text(
-                            text = "Performa & Riwayat",
+                            text = tr("Performa & Riwayat", "Performance & History"),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryDark
@@ -111,7 +113,7 @@ fun CustomerPerformanceDialog(
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextSecondaryDark)
+                        Icon(Icons.Default.Close, contentDescription = tr("Tutup", "Close"), tint = TextSecondaryDark)
                     }
                 }
 
@@ -137,14 +139,17 @@ fun CustomerPerformanceDialog(
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "Belum Ada Riwayat Kunjungan",
+                                text = tr("Belum Ada Riwayat Kunjungan", "No Visit History Yet"),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimaryDark
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Warung ini belum pernah menyelesaikan rekonsiliasi transaksi.",
+                                text = tr(
+                                    "Warung ini belum pernah menyelesaikan rekonsiliasi transaksi.",
+                                    "This store has not completed any visit reconciliation yet."
+                                ),
                                 fontSize = 12.sp,
                                 color = TextSecondaryDark
                             )
@@ -167,7 +172,7 @@ fun CustomerPerformanceDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text("Total Omset", fontSize = 10.sp, color = TextSecondaryDark)
+                                    Text(tr("Total Omset", "Total Sales"), fontSize = 10.sp, color = TextSecondaryDark)
                                     Text(
                                         "Rp %,.0f".format(performance.totalRevenue),
                                         fontSize = 14.sp,
@@ -176,7 +181,7 @@ fun CustomerPerformanceDialog(
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Kunjungan", fontSize = 10.sp, color = TextSecondaryDark)
+                                    Text(tr("Kunjungan", "Visits"), fontSize = 10.sp, color = TextSecondaryDark)
                                     Text(
                                         "${performance.totalVisits}x",
                                         fontSize = 14.sp,
@@ -185,7 +190,7 @@ fun CustomerPerformanceDialog(
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Terjual", fontSize = 10.sp, color = TextSecondaryDark)
+                                    Text(tr("Terjual", "Sold"), fontSize = 10.sp, color = TextSecondaryDark)
                                     Text(
                                         "${performance.totalSoldPieces} pcs",
                                         fontSize = 14.sp,
@@ -206,13 +211,13 @@ fun CustomerPerformanceDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Riwayat (${performance.history.size})",
+                                    text = tr("Riwayat (${performance.history.size})", "History (${performance.history.size})"),
                                     fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimaryDark
                                 )
                                 Text(
-                                    text = "Stok Aktif: ${performance.currentConsignedPieces} pcs",
+                                    text = tr("Stok Aktif: ${performance.currentConsignedPieces} pcs", "Active Stock: ${performance.currentConsignedPieces} pcs"),
                                     fontSize = 11.sp,
                                     color = SupabaseGreen
                                 )
@@ -238,7 +243,7 @@ fun CustomerPerformanceDialog(
                     ),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
                 ) {
-                    Text("Tutup", fontSize = 13.sp)
+                    Text(tr("Tutup", "Close"), fontSize = 13.sp)
                 }
             }
         }
@@ -279,7 +284,8 @@ private fun MetricTile(
 @Composable
 private fun VisitHistoryCard(record: CustomerVisitRecord) {
     var expanded by remember { mutableStateOf(false) }
-    val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date(record.transactionDate))
+    val loc = if (isEnglishLanguageActive) Locale.ENGLISH else Locale("id", "ID")
+    val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", loc).format(Date(record.transactionDate))
     val isPaidExact = record.amountPaid >= record.totalSoldAmount
 
     Card(
@@ -306,7 +312,7 @@ private fun VisitHistoryCard(record: CustomerVisitRecord) {
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Nota #TRX-${record.headerId}",
+                        text = tr("Nota #TRX-${record.headerId}", "Receipt #TRX-${record.headerId}"),
                         fontSize = 10.sp,
                         color = TextMutedDark
                     )
@@ -321,7 +327,7 @@ private fun VisitHistoryCard(record: CustomerVisitRecord) {
                             color = SupabaseGreen
                         )
                         Text(
-                            text = if (isPaidExact) "Setor: Lunas" else "Setor: Rp %,.0f".format(record.amountPaid),
+                            text = if (isPaidExact) tr("Setor: Lunas", "Paid: Full") else tr("Setor: Rp %,.0f", "Paid: Rp %,.0f").format(record.amountPaid),
                             fontSize = 10.sp,
                             color = if (isPaidExact) SupabaseGreen else RoseError
                         )
@@ -355,7 +361,7 @@ private fun VisitHistoryCard(record: CustomerVisitRecord) {
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "Laku: ${d.soldQuantity} | Sisa: ${d.remainingStock}",
+                            text = tr("Laku: ${d.soldQuantity} | Sisa: ${d.remainingStock}", "Sold: ${d.soldQuantity} | Rem: ${d.remainingStock}"),
                             fontSize = 10.5.sp,
                             color = TextPrimaryDark
                         )
@@ -365,7 +371,7 @@ private fun VisitHistoryCard(record: CustomerVisitRecord) {
                 if (!record.notes.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Catatan: ${record.notes}",
+                        text = tr("Catatan: ${record.notes}", "Notes: ${record.notes}"),
                         fontSize = 10.5.sp,
                         color = TextMutedDark
                     )
@@ -375,7 +381,7 @@ private fun VisitHistoryCard(record: CustomerVisitRecord) {
                     Spacer(modifier = Modifier.height(6.dp))
                     AsyncImage(
                         model = record.photoUri,
-                        contentDescription = "Foto Kunjungan",
+                        contentDescription = tr("Foto Kunjungan", "Visit Photo"),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()

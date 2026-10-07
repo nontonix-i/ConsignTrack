@@ -68,6 +68,7 @@ import com.example.ui.theme.SupabaseGreenDark
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
 import com.example.util.thermal.EscPosHelper
 import com.example.util.thermal.PairedPrinter
 
@@ -117,19 +118,19 @@ fun ReceiptPreviewDialog(
                 ) {
                     Column {
                         Text(
-                            text = "Bukti Transaksi",
+                            text = tr("Bukti Transaksi", "Transaction Receipt"),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryDark
                         )
                         Text(
-                            text = "Nota #TRX-${receipt.headerId} • ${receipt.customerName}",
+                            text = tr("Nota #TRX-${receipt.headerId} • ${receipt.customerName}", "Receipt #TRX-${receipt.headerId} • ${receipt.customerName}"),
                             fontSize = 12.sp,
                             color = TextSecondaryDark
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextSecondaryDark)
+                        Icon(Icons.Default.Close, contentDescription = tr("Tutup", "Close"), tint = TextSecondaryDark)
                     }
                 }
 
@@ -142,7 +143,7 @@ fun ReceiptPreviewDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Format:",
+                        text = tr("Format:", "Paper:"),
                         fontSize = 13.sp,
                         color = TextSecondaryDark
                     )
@@ -193,7 +194,7 @@ fun ReceiptPreviewDialog(
 
                 // Bluetooth Printer Selection
                 Text(
-                    text = "Printer:",
+                    text = tr("Printer:", "Printer:"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = TextPrimaryDark
@@ -212,7 +213,7 @@ fun ReceiptPreviewDialog(
                         modifier = Modifier.weight(1f)
                     ) {
                         val selectedName = pairedPrinters.find { it.address == selectedPrinterAddress }?.name
-                            ?: if (pairedPrinters.isEmpty()) "Printer belum terhubung" else "Pilih Printer..."
+                            ?: if (pairedPrinters.isEmpty()) tr("Printer belum terhubung", "No printer connected") else tr("Pilih Printer...", "Select Printer...")
 
                         OutlinedTextField(
                             value = selectedName,
@@ -240,7 +241,7 @@ fun ReceiptPreviewDialog(
                         ) {
                             if (pairedPrinters.isEmpty()) {
                                 DropdownMenuItem(
-                                    text = { Text("Printer belum terhubung", color = TextMutedDark) },
+                                    text = { Text(tr("Printer belum terhubung", "No printer connected"), color = TextMutedDark) },
                                     onClick = { printerDropdownExpanded = false }
                                 )
                             } else {
@@ -277,7 +278,7 @@ fun ReceiptPreviewDialog(
                     Text(
                         text = printMessage,
                         fontSize = 12.sp,
-                        color = if (printMessage.contains("Berhasil")) SupabaseGreen else Color(0xFFF87171)
+                        color = if (printMessage.contains("Berhasil") || printMessage.contains("Success")) SupabaseGreen else Color(0xFFF87171)
                     )
                 }
 
@@ -293,7 +294,7 @@ fun ReceiptPreviewDialog(
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Struk Konsinyasi", formattedReceiptText)
                             clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Teks struk berhasil disalin!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, tr("Teks struk berhasil disalin!", "Receipt text copied!"), Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
@@ -304,7 +305,7 @@ fun ReceiptPreviewDialog(
                     ) {
                         Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Salin Nota", fontSize = 13.sp)
+                        Text(tr("Salin Nota", "Copy Receipt"), fontSize = 13.sp)
                     }
 
                     Button(
@@ -324,11 +325,11 @@ fun ReceiptPreviewDialog(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Mencetak...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text(tr("Mencetak...", "Printing..."), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         } else {
                             Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Cetak Struk", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text(tr("Cetak Struk", "Print Receipt"), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

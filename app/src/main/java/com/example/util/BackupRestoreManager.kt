@@ -12,6 +12,7 @@ import com.example.data.local.entity.FinancialRecord
 import com.example.data.local.entity.Product
 import com.example.data.local.entity.TransactionDetail
 import com.example.data.local.entity.TransactionHeader
+import com.example.ui.theme.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -97,7 +98,7 @@ object BackupRestoreManager {
             val outputStream = context.contentResolver.openOutputStream(targetUri)
                 ?: return@withContext BackupOperationResult(
                     success = false,
-                    message = "Gagal membuka lokasi penyimpanan file ZIP."
+                    message = tr("Gagal membuka lokasi penyimpanan file ZIP.", "Failed to open ZIP file save location.")
                 )
 
             val stats = outputStream.use { out ->
@@ -106,13 +107,19 @@ object BackupRestoreManager {
 
             BackupOperationResult(
                 success = true,
-                message = "Backup ZIP berhasil disimpan (${stats.customerCount} Warung, ${stats.productCount} Produk, ${stats.transactionCount} Transaksi, ${stats.photoCount} Foto).",
+                message = tr(
+                    "Backup ZIP berhasil disimpan (${stats.customerCount} Warung, ${stats.productCount} Produk, ${stats.transactionCount} Transaksi, ${stats.photoCount} Foto).",
+                    "ZIP backup saved (${stats.customerCount} Stores, ${stats.productCount} Products, ${stats.transactionCount} Transactions, ${stats.photoCount} Photos)."
+                ),
                 stats = stats
             )
         } catch (e: Exception) {
             BackupOperationResult(
                 success = false,
-                message = "Gagal mengekspor backup ZIP: ${e.localizedMessage ?: e.message}"
+                message = tr(
+                    "Gagal mengekspor backup ZIP: ${e.localizedMessage ?: e.message}",
+                    "Failed to export ZIP backup: ${e.localizedMessage ?: e.message}"
+                )
             )
         }
     }
@@ -138,14 +145,20 @@ object BackupRestoreManager {
 
             BackupOperationResult(
                 success = true,
-                message = "File Backup ZIP siap dibagikan (${stats.customerCount} Warung, ${stats.photoCount} Foto).",
+                message = tr(
+                    "File Backup ZIP siap dibagikan (${stats.customerCount} Warung, ${stats.photoCount} Foto).",
+                    "Backup ZIP ready to share (${stats.customerCount} Stores, ${stats.photoCount} Photos)."
+                ),
                 stats = stats,
                 shareFile = zipFile
             )
         } catch (e: Exception) {
             BackupOperationResult(
                 success = false,
-                message = "Gagal membuat file Share ZIP: ${e.localizedMessage ?: e.message}"
+                message = tr(
+                    "Gagal membuat file Share ZIP: ${e.localizedMessage ?: e.message}",
+                    "Failed to create shareable ZIP file: ${e.localizedMessage ?: e.message}"
+                )
             )
         }
     }
@@ -159,11 +172,11 @@ object BackupRestoreManager {
             putExtra(Intent.EXTRA_SUBJECT, zipFile.nameWithoutExtension)
             putExtra(
                 Intent.EXTRA_TEXT,
-                "File Backup Data & Foto ConsignTrack (${zipFile.name})"
+                tr("File Backup Data & Foto ConsignTrack (${zipFile.name})", "ConsignTrack Data & Photo Backup File (${zipFile.name})")
             )
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(shareIntent, "Bagikan File Backup ZIP").apply {
+        val chooser = Intent.createChooser(shareIntent, tr("Bagikan File Backup ZIP", "Share Backup ZIP File")).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)
@@ -497,7 +510,10 @@ object BackupRestoreManager {
             val jsonText = backupJsonString
                 ?: return@withContext BackupOperationResult(
                     success = false,
-                    message = "File ZIP tidak valid atau tidak berisi data backup ConsignTrack (backup_data.json)."
+                    message = tr(
+                        "File ZIP tidak valid atau tidak berisi data backup ConsignTrack (backup_data.json).",
+                        "Invalid ZIP file or does not contain ConsignTrack backup data (backup_data.json)."
+                    )
                 )
 
             val rootJson = JSONObject(jsonText)
@@ -734,13 +750,19 @@ object BackupRestoreManager {
 
             BackupOperationResult(
                 success = true,
-                message = "Data berhasil dipulihkan: ${stats.customerCount} Warung, ${stats.productCount} Produk, ${stats.stockCount} Stok, ${stats.transactionCount} Transaksi, ${stats.financialCount} Kas, dan ${stats.photoCount} Foto.",
+                message = tr(
+                    "Data berhasil dipulihkan: ${stats.customerCount} Warung, ${stats.productCount} Produk, ${stats.stockCount} Stok, ${stats.transactionCount} Transaksi, ${stats.financialCount} Kas, dan ${stats.photoCount} Foto.",
+                    "Data restored: ${stats.customerCount} Stores, ${stats.productCount} Products, ${stats.stockCount} Stocks, ${stats.transactionCount} Transactions, ${stats.financialCount} Cash Records, and ${stats.photoCount} Photos."
+                ),
                 stats = stats
             )
         } catch (e: Exception) {
             BackupOperationResult(
                 success = false,
-                message = "Gagal mengimpor backup ZIP: ${e.localizedMessage ?: e.message}"
+                message = tr(
+                    "Gagal mengimpor backup ZIP: ${e.localizedMessage ?: e.message}",
+                    "Failed to import ZIP backup: ${e.localizedMessage ?: e.message}"
+                )
             )
         }
     }
@@ -769,13 +791,19 @@ object BackupRestoreManager {
 
             BackupOperationResult(
                 success = true,
-                message = "Seluruh data & foto telah dihapus bersih (Pre-Production Ready).",
+                message = tr(
+                    "Seluruh data & foto telah dihapus bersih (Pre-Production Ready).",
+                    "All data & photos have been wiped clean (Pre-Production Ready)."
+                ),
                 stats = BackupStats()
             )
         } catch (e: Exception) {
             BackupOperationResult(
                 success = false,
-                message = "Gagal menghapus data: ${e.localizedMessage ?: e.message}"
+                message = tr(
+                    "Gagal menghapus data: ${e.localizedMessage ?: e.message}",
+                    "Failed to clear data: ${e.localizedMessage ?: e.message}"
+                )
             )
         }
     }

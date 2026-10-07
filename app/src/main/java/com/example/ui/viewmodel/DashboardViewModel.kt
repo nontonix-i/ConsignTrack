@@ -10,6 +10,7 @@ import com.example.data.local.entity.Product
 import com.example.data.repository.ConsignmentRepository
 import com.example.domain.model.CustomerPerformance
 import com.example.domain.model.CustomerWithStatus
+import com.example.ui.theme.tr
 import com.example.util.LocationHelper
 import java.util.Calendar
 import java.util.Locale
@@ -29,12 +30,20 @@ enum class RouteFilter {
     VISITED
 }
 
-enum class CustomerSortOption(val label: String, val shortLabel: String) {
-    NEAREST("Lokasi Terdekat (GPS)", "Terdekat"),
-    ROUTE_ORDER("Urutan Rute (#1, #2...)", "Rute"),
-    NAME("Nama Toko (A - Z)", "Nama A-Z"),
-    STOCK_HIGHEST("Stok Terbanyak", "Stok"),
-    UNVISITED_FIRST("Belum Dikunjungi Dulu", "Belum Visit")
+enum class CustomerSortOption(
+    val labelId: String,
+    val labelEn: String,
+    val shortLabelId: String,
+    val shortLabelEn: String
+) {
+    NEAREST("Lokasi Terdekat (GPS)", "Nearest (GPS)", "Terdekat", "Nearest"),
+    ROUTE_ORDER("Urutan Rute (#1, #2...)", "Route Order (#1, #2...)", "Rute", "Route"),
+    NAME("Nama Toko (A - Z)", "Store Name (A - Z)", "Nama A-Z", "Name A-Z"),
+    STOCK_HIGHEST("Stok Terbanyak", "Highest Stock", "Stok", "Stock"),
+    UNVISITED_FIRST("Belum Dikunjungi Dulu", "Unvisited First", "Belum Visit", "Unvisited");
+
+    val label: String get() = tr(labelId, labelEn)
+    val shortLabel: String get() = tr(shortLabelId, shortLabelEn)
 }
 
 data class DashboardUiState(
@@ -384,10 +393,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 resolvedAddress = LocationHelper.reverseGeocodeAddress(app, lat!!, lng!!).orEmpty()
             }
 
+            val existingNames = state.allCustomers.map { it.customer.name }
+            val uniqueCode = LocationHelper.generateUniqueWarungCode(existingNames)
+
             val generatedName = if (!customName.isNullOrBlank()) {
                 customName.trim()
             } else {
-                "Warung #%02d".format(nextGlobalNumber)
+                LocationHelper.formatWarungAutoCoordName(
+                    uniqueCode = uniqueCode,
+                    latitude = lat,
+                    longitude = lng,
+                    useLongitude = false
+                )
             }
 
             val newCust = Customer(

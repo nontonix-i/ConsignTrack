@@ -94,6 +94,8 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
+import com.example.ui.theme.trDay
 import com.example.ui.viewmodel.AnalyticsViewModel
 import com.example.ui.viewmodel.AppLanguage
 import java.text.SimpleDateFormat
@@ -220,7 +222,7 @@ fun GraphicsAnalysisScreen(
         )
     }
 
-    val periodDescriptionLabel = remember(selectedPeriodMode, selectedYear, selectedMonth, selectedDay) {
+    val periodDescriptionLabel = remember(selectedPeriodMode, selectedYear, selectedMonth, selectedDay, isEn) {
         formatPeriodLabel(selectedPeriodMode, selectedYear, selectedMonth, selectedDay)
     }
 
@@ -316,7 +318,7 @@ fun GraphicsAnalysisScreen(
                         ?: shortFmt.format(Date(tx.header.transaction_date)),
                     primaryValue = rev,
                     secondaryValue = profit.coerceAtLeast(0.0),
-                    subtitle = "${tx.customer?.name ?: "Transaksi"} (${fmt.format(Date(tx.header.transaction_date))})"
+                    subtitle = "${tx.customer?.name ?: tr("Transaksi", "Transaction")} (${fmt.format(Date(tx.header.transaction_date))})"
                 )
             }
         } else if (!isSpecificDateOrMonth) {
@@ -335,7 +337,7 @@ fun GraphicsAnalysisScreen(
                     label = c.name.replace("Warung ", "").replace("Toko ", "").take(8),
                     primaryValue = retailVal,
                     secondaryValue = potProfit,
-                    subtitle = "${c.name} • Rute ${c.route_day}"
+                    subtitle = "${c.name} • ${tr("Rute", "Route")} ${trDay(c.route_day)}"
                 )
             }
         } else {
@@ -604,7 +606,7 @@ fun GraphicsAnalysisScreen(
                             KpiMetricCard(
                                 title = primaryLabel,
                                 value = formatRupiahCompact(primaryDisplayVal),
-                                subValue = if (useTxMetrics) "${filteredTransactions.size} Nota Transaksi" else "${customers.size} Warung Mitra",
+                                subValue = if (useTxMetrics) tr("${filteredTransactions.size} Nota Transaksi", "${filteredTransactions.size} Receipts") else tr("${customers.size} Warung Mitra", "${customers.size} Partner Stores"),
                                 accentColor = SupabaseGreen,
                                 progress = 0.82f * animProgress,
                                 icon = Icons.AutoMirrored.Filled.TrendingUp,
@@ -636,7 +638,7 @@ fun GraphicsAnalysisScreen(
                             KpiMetricCard(
                                 title = if (isEn) "Collection Rate" else "Setoran Kas Masuk",
                                 value = if (useTxMetrics) formatRupiahCompact(filteredPaidAmount) else "%.0f%%".format(collectionRate),
-                                subValue = if (useTxMetrics) "Rasio Bayar %.0f%%".format(collectionRate) else "${customers.size} Warung • ${products.size} Produk",
+                                subValue = if (useTxMetrics) tr("Rasio Bayar %.0f%%".format(collectionRate), "Paid Ratio %.0f%%".format(collectionRate)) else tr("${customers.size} Warung • ${products.size} Produk", "${customers.size} Stores • ${products.size} Products"),
                                 accentColor = Color(0xFFA855F7),
                                 progress = (collectionRate.toFloat() / 100f).coerceIn(0.15f, 1f) * animProgress,
                                 icon = Icons.Default.AccountBalanceWallet,
@@ -679,12 +681,12 @@ fun GraphicsAnalysisScreen(
                         subtitle = if (hasTransactionHistory) {
                             if (isEn) "Tap any node on the curve to inspect transaction details" else "Sentuh titik pada kurva untuk melihat detail transaksi pada periode terpilih"
                         } else if (isSpecificDateOrMonth) {
-                            "Belum ada nota kunjungan pada tanggal/bulan ini. Pilih tanggal bertitik hijau di atas."
+                            tr("Belum ada nota kunjungan pada tanggal/bulan ini. Pilih tanggal bertitik hijau di atas.", "No visit receipts on this date/month. Select a date with a green dot above.")
                         } else {
                             if (isEn) "Tap any store node to inspect consigned value & profit" else "Sentuh titik warung pada grafik untuk inspeksi nilai & margin"
                         },
-                        primaryLegend = if (hasTransactionHistory || isSpecificDateOrMonth) "Omset" else "Nilai Jual",
-                        secondaryLegend = if (hasTransactionHistory || isSpecificDateOrMonth) "Laba" else "Potensi Laba",
+                        primaryLegend = if (hasTransactionHistory || isSpecificDateOrMonth) tr("Omset", "Revenue") else tr("Nilai Jual", "Retail Value"),
+                        secondaryLegend = if (hasTransactionHistory || isSpecificDateOrMonth) tr("Laba", "Profit") else tr("Potensi Laba", "Est. Profit"),
                         points = trendPoints,
                         animProgress = animProgress
                     )
@@ -920,7 +922,7 @@ private fun BezierTrendChartCard(
                         .height(160.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Belum ada data untuk ditampilkan", color = TextMutedDark, fontSize = 12.sp)
+                    Text(tr("Belum ada data untuk ditampilkan", "No data available to display"), color = TextMutedDark, fontSize = 12.sp)
                 }
             } else {
                 val safeIdx = selectedIndex.coerceIn(0, points.lastIndex)
@@ -951,7 +953,7 @@ private fun BezierTrendChartCard(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Titik #${safeIdx + 1} dari ${points.size}",
+                                text = tr("Titik #${safeIdx + 1} dari ${points.size}", "Node #${safeIdx + 1} of ${points.size}"),
                                 fontSize = 10.sp,
                                 color = TextMutedDark
                             )
@@ -1211,7 +1213,7 @@ private fun ProductDonutChartCard(
                         .height(140.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Belum ada katalog produk", color = TextMutedDark, fontSize = 12.sp)
+                    Text(tr("Belum ada katalog produk", "No products in catalog yet"), color = TextMutedDark, fontSize = 12.sp)
                 }
             } else {
                 val safeIdx = selectedSliceIdx.coerceIn(0, slices.lastIndex)
@@ -1419,7 +1421,7 @@ private fun StoreRankingBarChartCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             if (rankings.isEmpty()) {
-                Text("Belum ada data warung", color = TextMutedDark, fontSize = 12.sp)
+                Text(tr("Belum ada data warung", "No store data yet"), color = TextMutedDark, fontSize = 12.sp)
             } else {
                 val maxMetricVal = remember(rankings, selectedMetric) {
                     val m = rankings.maxOfOrNull {
@@ -1485,7 +1487,7 @@ private fun StoreRankingBarChartCard(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "• ${item.customer.route_day}",
+                                        text = "• ${trDay(item.customer.route_day)}",
                                         fontSize = 10.sp,
                                         color = TextMutedDark
                                     )
@@ -1638,13 +1640,13 @@ private fun WeeklyRouteColumnChartCard(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = shortDay,
+                            text = trDay(shortDay, short = true),
                             fontSize = 10.5.sp,
                             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                             color = if (isActive) TextPrimaryDark else TextMutedDark
                         )
                         Text(
-                            text = "$storeCount toko",
+                            text = tr("$storeCount toko", "$storeCount stores"),
                             fontSize = 8.5.sp,
                             color = TextSecondaryDark
                         )

@@ -75,6 +75,7 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
 import kotlin.math.abs
 
 data class BulkProductSelection(
@@ -179,9 +180,9 @@ fun AddProductToOutletDialog(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (!outletName.isNullOrBlank()) {
-                                "Bulk Pilih Produk • $outletName"
+                                tr("Bulk Pilih Produk • $outletName", "Bulk Select Products • $outletName")
                             } else {
-                                "Bulk Tambah Produk Titipan"
+                                tr("Bulk Tambah Produk Titipan", "Bulk Add Consigned Products")
                             },
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
@@ -190,7 +191,7 @@ fun AddProductToOutletDialog(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Centang produk yang ingin dititipkan sekaligus & atur jumlahnya",
+                            text = tr("Centang produk yang ingin dititipkan sekaligus & atur jumlahnya", "Check multiple products to consign at once & set quantities"),
                             fontSize = 11.sp,
                             color = SupabaseGreen
                         )
@@ -198,7 +199,7 @@ fun AddProductToOutletDialog(
                     IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Tutup",
+                            contentDescription = tr("Tutup", "Close"),
                             tint = TextSecondaryDark,
                             modifier = Modifier.size(18.dp)
                         )
@@ -217,7 +218,7 @@ fun AddProductToOutletDialog(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Cari produk...", color = TextMutedDark, fontSize = 12.sp) },
+                        placeholder = { Text(tr("Cari produk...", "Search products..."), color = TextMutedDark, fontSize = 12.sp) },
                         leadingIcon = {
                             Icon(Icons.Default.Search, contentDescription = null, tint = TextMutedDark, modifier = Modifier.size(16.dp))
                         },
@@ -260,13 +261,13 @@ fun AddProductToOutletDialog(
                             ) {
                                 Icon(
                                     imageVector = if (allVisibleSelected) Icons.Default.CheckBox else Icons.Default.DoneAll,
-                                    contentDescription = "Pilih Semua",
+                                    contentDescription = tr("Pilih Semua", "Select All"),
                                     tint = if (allVisibleSelected) SupabaseGreen else TextSecondaryDark,
                                     modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (allVisibleSelected) "Batal Semua" else "Pilih Semua",
+                                    text = if (allVisibleSelected) tr("Batal Semua", "Unselect All") else tr("Pilih Semua", "Select All"),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (allVisibleSelected) SupabaseGreen else TextPrimaryDark
@@ -285,7 +286,7 @@ fun AddProductToOutletDialog(
                     ) {
                         item {
                             Text(
-                                text = "Isi Cepat:",
+                                text = tr("Isi Cepat:", "Quick Set:"),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TextSecondaryDark,
@@ -311,7 +312,7 @@ fun AddProductToOutletDialog(
                                 color = CharcoalSurfaceElevated
                             ) {
                                 Text(
-                                    text = "Semua $presetPack Pack",
+                                    text = tr("Semua $presetPack Pack", "All $presetPack Pack"),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = SupabaseGreen,
@@ -342,9 +343,9 @@ fun AddProductToOutletDialog(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = if (existingItemIds.size >= catalogProducts.size && catalogProducts.isNotEmpty())
-                                    "Semua produk katalog sudah ada di daftar warung ini"
+                                    tr("Semua produk katalog sudah ada di daftar warung ini", "All catalog products are already in this store")
                                 else
-                                    "Produk tidak ditemukan",
+                                    tr("Produk tidak ditemukan", "No products found"),
                                 fontSize = 12.sp,
                                 color = TextSecondaryDark
                             )
@@ -431,13 +432,13 @@ fun AddProductToOutletDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "$totalSelectedProducts Produk Dicentang ($totalSelectedPcs Pcs)",
+                            text = tr("$totalSelectedProducts Produk Dicentang ($totalSelectedPcs Pcs)", "$totalSelectedProducts Selected ($totalSelectedPcs Pcs)"),
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = SupabaseGreen
                         )
                         Text(
-                            text = "Nilai: Rp %,.0f".format(totalEstimatedValue),
+                            text = "${tr("Nilai", "Value")}: Rp %,.0f".format(totalEstimatedValue),
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryDark
@@ -457,7 +458,7 @@ fun AddProductToOutletDialog(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondaryDark),
                         border = BorderStroke(1.dp, CharcoalBorder)
                     ) {
-                        Text("Batal", fontSize = 12.5.sp)
+                        Text(tr("Batal", "Cancel"), fontSize = 12.5.sp)
                     }
 
                     Button(
@@ -487,9 +488,9 @@ fun AddProductToOutletDialog(
                     ) {
                         Text(
                             text = if (totalSelectedProducts > 0) {
-                                "+ Simpan $totalSelectedProducts Produk ($totalSelectedPcs Pcs)"
+                                tr("+ Simpan $totalSelectedProducts Produk ($totalSelectedPcs Pcs)", "+ Save $totalSelectedProducts Products ($totalSelectedPcs Pcs)")
                             } else {
-                                "Centang Produk Dulu"
+                                tr("Centang Produk Dulu", "Check Products First")
                             },
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold
@@ -576,7 +577,7 @@ private fun BulkProductToConsignItem(
                             if (alreadyInOutlet) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "(Sudah Ada)",
+                                    text = tr("(Sudah Ada)", "(Already Added)"),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = AmberWarning
@@ -602,7 +603,7 @@ private fun BulkProductToConsignItem(
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 Icons.Default.Edit,
-                                contentDescription = "Ubah Harga",
+                                contentDescription = tr("Ubah Harga", "Edit Price"),
                                 tint = if (showCustomPriceField) AmberWarning else SupabaseGreen,
                                 modifier = Modifier.size(11.dp)
                             )
@@ -633,7 +634,7 @@ private fun BulkProductToConsignItem(
                     ) {
                         Icon(
                             Icons.Default.Remove,
-                            contentDescription = "Kurang Pack",
+                            contentDescription = tr("Kurang Pack", "Decrease Pack"),
                             tint = TextPrimaryDark,
                             modifier = Modifier.size(13.dp)
                         )
@@ -671,7 +672,7 @@ private fun BulkProductToConsignItem(
                     ) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = "Tambah Pack",
+                            contentDescription = tr("Tambah Pack", "Increase Pack"),
                             tint = SupabaseGreen,
                             modifier = Modifier.size(13.dp)
                         )
@@ -722,7 +723,7 @@ private fun BulkProductToConsignItem(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Ecer:",
+                            text = tr("Ecer:", "Loose:"),
                             fontSize = 10.sp,
                             color = TextSecondaryDark
                         )
@@ -761,7 +762,7 @@ private fun BulkProductToConsignItem(
                 OutlinedTextField(
                     value = customPricePackStr,
                     onValueChange = onCustomPriceChange,
-                    label = { Text("Harga Khusus / ${product.unit_big} (Rp)", fontSize = 10.sp) },
+                    label = { Text(tr("Harga Khusus / ${product.unit_big} (Rp)", "Custom Price / ${product.unit_big} (Rp)"), fontSize = 10.sp) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(

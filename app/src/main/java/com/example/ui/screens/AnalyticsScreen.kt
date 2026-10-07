@@ -129,6 +129,7 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
 import com.example.ui.viewmodel.AnalyticsViewModel
 import com.example.ui.viewmodel.AppLanguage
 import com.example.ui.viewmodel.AppThemeMode
@@ -239,10 +240,10 @@ fun FloatingAiChatDialog(
     val presetQuestions = if (isEn) {
         if (uiState.agentModeEnabled) {
             listOf(
-                "Tambah warung Toko Maju di Jl. Merdeka",
-                "Tambah produk Keripik Singkong harga 18000",
-                "Set stok Kerupuk Udang di Warung Bu Siti 45 pcs",
-                "Catat pengeluaran bensin 25000",
+                "Add store Toko Maju at Jl. Merdeka",
+                "Add product Cassava Chips price 18000",
+                "Set Shrimp Crackers stock at Warung Bu Siti to 45 pcs",
+                "Record fuel expense 25000",
                 "Top selling store?",
                 "Current net profit?"
             )
@@ -635,7 +636,7 @@ fun AppMenuDrawerSheet(
                     )
                 }
                 IconButton(onClick = onCloseDrawer, modifier = Modifier.size(30.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextSecondaryDark)
+                    Icon(Icons.Default.Close, contentDescription = tr("Tutup", "Close"), tint = TextSecondaryDark)
                 }
             }
 
@@ -1094,7 +1095,7 @@ fun AppMenuDrawerSheet(
 
                     Text(
                         text = "Key: $maskedKey • Model: ${uiState.aiModelName}" +
-                                if (uiState.geminiApiKey.isNotBlank()) " • Gemini Aktif" else "",
+                                if (uiState.geminiApiKey.isNotBlank()) tr(" • Gemini Aktif", " • Gemini Active") else "",
                         fontSize = 11.sp,
                         color = TextSecondaryDark,
                         maxLines = 1,
@@ -1450,13 +1451,23 @@ fun AnalyticsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var printerDropdownExpanded by remember { mutableStateOf(false) }
 
-    val presetQuestions = listOf(
-        "Toko terlaris?",
-        "Total stok tersebar?",
-        "Laba bersih saat ini?",
-        "Warung belum dikunjungi?",
-        "Margin produk tertinggi?"
-    )
+    val presetQuestions = if (uiState.language == AppLanguage.EN) {
+        listOf(
+            "Top selling store?",
+            "Total consigned stock?",
+            "Current net profit?",
+            "Unvisited stores today?",
+            "Highest margin product?"
+        )
+    } else {
+        listOf(
+            "Toko terlaris?",
+            "Total stok tersebar?",
+            "Laba bersih saat ini?",
+            "Warung belum dikunjungi?",
+            "Margin produk tertinggi?"
+        )
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -1478,7 +1489,7 @@ fun AnalyticsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Analisis",
+                    text = tr("Analisis", "Analytics"),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark
@@ -1516,7 +1527,7 @@ fun AnalyticsScreen(
                         Icon(Icons.Default.SmartToy, contentDescription = null, tint = SupabaseGreen, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Tanya Data Bisnis",
+                            text = tr("Tanya Data Bisnis", "Ask Business Data"),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextSecondaryDark
@@ -1599,7 +1610,7 @@ private fun PrinterConfigCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "PRINTER THERMAL BLUETOOTH",
+                        text = tr("PRINTER THERMAL BLUETOOTH", "BLUETOOTH THERMAL PRINTER"),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp,
@@ -1623,7 +1634,7 @@ private fun PrinterConfigCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val selectedName = pairedPrinters.find { it.address == selectedPrinter }?.name
-                    ?: if (pairedPrinters.isEmpty()) "Printer belum terhubung" else "Pilih Printer..."
+                    ?: if (pairedPrinters.isEmpty()) tr("Printer belum terhubung", "No printer connected") else tr("Pilih Printer...", "Select Printer...")
 
                 OutlinedTextField(
                     value = selectedName,
@@ -1651,7 +1662,7 @@ private fun PrinterConfigCard(
                 ) {
                     if (pairedPrinters.isEmpty()) {
                         DropdownMenuItem(
-                            text = { Text("Hubungkan printer via Bluetooth HP", color = TextMutedDark) },
+                            text = { Text(tr("Hubungkan printer via Bluetooth HP", "Pair printer via phone Bluetooth"), color = TextMutedDark) },
                             onClick = { onDropdownExpandedChange(false) }
                         )
                     } else {
@@ -1682,7 +1693,7 @@ private fun PrinterConfigCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Ukuran Kertas Default:",
+                    text = tr("Ukuran Kertas Default:", "Default Paper Size:"),
                     fontSize = 11.5.sp,
                     color = TextSecondaryDark
                 )
@@ -1731,7 +1742,7 @@ private fun PrinterConfigCard(
                 ) {
                     Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Tes 58mm", fontSize = 12.sp)
+                    Text(tr("Tes 58mm", "Test 58mm"), fontSize = 12.sp)
                 }
 
                 Button(
@@ -1747,7 +1758,7 @@ private fun PrinterConfigCard(
                 ) {
                     Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Tes 80mm", fontSize = 12.sp)
+                    Text(tr("Tes 80mm", "Test 80mm"), fontSize = 12.sp)
                 }
             }
 
@@ -1756,7 +1767,7 @@ private fun PrinterConfigCard(
                 Text(
                     text = testPrintStatus,
                     fontSize = 11.5.sp,
-                    color = if (testPrintStatus.contains("Berhasil")) SupabaseGreen else Color(0xFFF87171)
+                    color = if (testPrintStatus.contains("Berhasil") || testPrintStatus.contains("Success")) SupabaseGreen else Color(0xFFF87171)
                 )
             }
         }
@@ -1800,7 +1811,7 @@ private fun ChatBubble(message: ChatMessage) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isUser) "Anda" else if (message.executedTools.isNotEmpty()) "AI Agent • Tool Executor" else "Asisten AI",
+                            text = if (isUser) tr("Anda", "You") else if (message.executedTools.isNotEmpty()) "AI Agent • Tool Executor" else tr("Asisten AI", "AI Assistant"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isUser) SupabaseGreen else Color(0xFF38BDF8)
@@ -1812,13 +1823,13 @@ private fun ChatBubble(message: ChatMessage) {
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("Chat Message", message.text))
-                            Toast.makeText(context, "Pesan disalin", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, tr("Pesan disalin", "Message copied"), Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
                             Icons.Default.ContentCopy,
-                            contentDescription = "Salin Pesan",
+                            contentDescription = tr("Salin Pesan", "Copy Message"),
                             tint = TextMutedDark,
                             modifier = Modifier.size(13.dp)
                         )
@@ -1836,7 +1847,7 @@ private fun ChatBubble(message: ChatMessage) {
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
-                            text = "⚡ TOOL CALLS DIJALANKAN (${message.executedTools.size})",
+                            text = tr("⚡ TOOL CALLS DIJALANKAN (${message.executedTools.size})", "⚡ EXECUTED TOOL CALLS (${message.executedTools.size})"),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = SupabaseGreen,

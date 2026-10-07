@@ -14,6 +14,8 @@ import com.example.domain.model.ReceiptItemData
 import com.example.util.BackupOperationResult
 import com.example.util.BackupRestoreManager
 import com.example.util.BackupStats
+import com.example.ui.theme.isEnglishLanguageActive
+import com.example.ui.theme.tr
 import com.example.util.thermal.BluetoothPrinterManager
 import com.example.util.thermal.EscPosHelper
 import com.example.util.thermal.PairedPrinter
@@ -114,7 +116,7 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update {
                 it.copy(
                     isBackupInProgress = true,
-                    backupStatusMessage = "Membuat file Backup ZIP (Data + Foto)...",
+                    backupStatusMessage = tr("Membuat file Backup ZIP (Data + Foto)...", "Creating Backup ZIP file (Data + Photos)..."),
                     backupStatusSuccess = true
                 )
             }
@@ -137,7 +139,7 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update {
                 it.copy(
                     isBackupInProgress = true,
-                    backupStatusMessage = "Menyiapkan file Backup ZIP untuk dibagikan...",
+                    backupStatusMessage = tr("Menyiapkan file Backup ZIP untuk dibagikan...", "Preparing Backup ZIP file to share..."),
                     backupStatusSuccess = true
                 )
             }
@@ -158,7 +160,10 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
                 }.onFailure { err ->
                     _uiState.update {
                         it.copy(
-                            backupStatusMessage = "Gagal membuka menu bagikan: ${err.localizedMessage ?: err.message}",
+                            backupStatusMessage = tr(
+                                "Gagal membuka menu bagikan: ${err.localizedMessage ?: err.message}",
+                                "Failed to open share menu: ${err.localizedMessage ?: err.message}"
+                            ),
                             backupStatusSuccess = false
                         )
                     }
@@ -173,7 +178,7 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update {
                 it.copy(
                     isBackupInProgress = true,
-                    backupStatusMessage = "Mengimpor & memulihkan data serta foto dari ZIP...",
+                    backupStatusMessage = tr("Mengimpor & memulihkan data serta foto dari ZIP...", "Importing & restoring data and photos from ZIP..."),
                     backupStatusSuccess = true
                 )
             }
@@ -216,7 +221,7 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update {
                 it.copy(
                     isBackupInProgress = true,
-                    backupStatusMessage = "Menghapus seluruh data & foto...",
+                    backupStatusMessage = tr("Menghapus seluruh data & foto...", "Clearing all data & photos..."),
                     backupStatusSuccess = true
                 )
             }
@@ -259,6 +264,7 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
 
         val themeMode = runCatching { AppThemeMode.valueOf(themeStr) }.getOrDefault(AppThemeMode.DARK)
         val language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(AppLanguage.ID)
+        isEnglishLanguageActive = (language == AppLanguage.EN)
 
         val initialGreeting = if (language == AppLanguage.EN) {
             "Hello! I am your **ConsignTrack AI Agent** with **Tool Calling** enabled. I can analyze your business or directly **Add, Edit, & Erase** Stores, Products, Consigned Stock, Transactions, and Financial Records!"
@@ -330,8 +336,19 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun setLanguage(lang: AppLanguage) {
+        isEnglishLanguageActive = (lang == AppLanguage.EN)
         prefs.edit().putString("language", lang.name).apply()
-        _uiState.update { it.copy(language = lang) }
+        val updatedMessages = if (_uiState.value.messages.size == 1 && _uiState.value.messages.first().sender == "AGENT") {
+            val newGreeting = if (lang == AppLanguage.EN) {
+                "Hello! I am your **ConsignTrack AI Agent** with **Tool Calling** enabled. I can analyze your business or directly **Add, Edit, & Erase** Stores, Products, Consigned Stock, Transactions, and Financial Records!"
+            } else {
+                "Halo! Saya **AI Agent ConsignTrack** dengan fitur **Tool Calling**. Selain menganalisis bisnis, saya bisa **Menambah, Mengubah (Edit), & Menghapus** Warung, Produk, Stok Titipan, Transaksi, hingga Buku Kas secara langsung!"
+            }
+            listOf(ChatMessage(sender = "AGENT", text = newGreeting))
+        } else {
+            _uiState.value.messages
+        }
+        _uiState.update { it.copy(language = lang, messages = updatedMessages) }
     }
 
     fun setShowFloatingAiChat(show: Boolean) {
@@ -441,7 +458,7 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
     fun printTestReceipt(is80mm: Boolean = _uiState.value.defaultPaper80mm) {
         val address = _uiState.value.selectedPrinter
         if (address.isNullOrBlank()) {
-            _uiState.update { it.copy(testPrintStatus = "Pilih printer Bluetooth terlebih dahulu.") }
+            _uiState.update { it.copy(testPrintStatus = tr("Pilih printer Bluetooth terlebih dahulu.", "Please select a Bluetooth printer first.")) }
             return
         }
 
@@ -452,12 +469,12 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             businessSub = state.businessAddress,
             businessPhone = state.businessPhone,
             transactionDate = System.currentTimeMillis(),
-            customerName = "Toko Uji Coba",
-            customerAddress = "Jl. Demo Sistem No. 1",
+            customerName = tr("Toko Uji Coba", "Demo Store"),
+            customerAddress = tr("Jl. Demo Sistem No. 1", "1 Demo System St."),
             items = listOf(
                 ReceiptItemData(
-                    productName = "Kerupuk Uji Coba",
-                    unit = "Bungkus",
+                    productName = tr("Kerupuk Uji Coba", "Demo Crackers"),
+                    unit = tr("Bungkus", "Pcs"),
                     prevStock = 20,
                     remStock = 5,
                     returStock = 0,
@@ -472,16 +489,16 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
             totalAmount = 30000.0,
             amountPaid = 30000.0,
             changeOrDebt = 0.0,
-            notes = "Uji cetak berhasil. Printer siap digunakan di lapangan."
+            notes = tr("Uji cetak berhasil. Printer siap digunakan di lapangan.", "Test print successful. Printer is ready for field use.")
         )
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isPrintingTest = true, testPrintStatus = "Mengirim data ke printer...") }
+            _uiState.update { it.copy(isPrintingTest = true, testPrintStatus = tr("Mengirim data ke printer...", "Sending data to printer...")) }
             val bytes = EscPosHelper.buildEscPosBytes(testReceipt, is80mm)
             val result = printerManager.printData(address, bytes)
             when (result) {
                 is PrintResult.Success -> {
-                    _uiState.update { it.copy(isPrintingTest = false, testPrintStatus = "Berhasil mencetak nota uji!") }
+                    _uiState.update { it.copy(isPrintingTest = false, testPrintStatus = tr("Berhasil mencetak nota uji!", "Test receipt printed successfully!")) }
                 }
                 is PrintResult.Error -> {
                     _uiState.update { it.copy(isPrintingTest = false, testPrintStatus = result.message) }

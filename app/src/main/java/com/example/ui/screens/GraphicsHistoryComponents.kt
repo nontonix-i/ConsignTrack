@@ -79,6 +79,8 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.isEnglishLanguageActive
+import com.example.ui.theme.tr
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -114,10 +116,23 @@ private val MONTH_NAMES_ID = listOf(
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 )
 
+private val MONTH_NAMES_EN = listOf(
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+)
+
 private val MONTH_SHORT_ID = listOf(
     "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
     "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
 )
+
+private val MONTH_SHORT_EN = listOf(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+)
+
+private fun monthName(idx: Int): String = if (isEnglishLanguageActive) MONTH_NAMES_EN[idx.coerceIn(0, 11)] else MONTH_NAMES_ID[idx.coerceIn(0, 11)]
+private fun monthShort(idx: Int): String = if (isEnglishLanguageActive) MONTH_SHORT_EN[idx.coerceIn(0, 11)] else MONTH_SHORT_ID[idx.coerceIn(0, 11)]
 
 fun computePeriodBounds(
     mode: AnalyticsPeriodMode,
@@ -195,7 +210,7 @@ fun buildDailyHistoryList(
     productMap: Map<Long, Product>
 ): List<DailyHistorySummary> {
     val keyFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-    val displayFmt = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
+    val displayFmt = SimpleDateFormat("EEEE, dd MMM yyyy", if (isEnglishLanguageActive) Locale.ENGLISH else Locale("id", "ID"))
 
     val txByDay = transactions.groupBy { keyFmt.format(Date(it.header.transaction_date)) }
     val expByDay = bizRecords
@@ -291,10 +306,10 @@ fun DateAndMonthFilterControlCard(
         cal.getActualMaximum(Calendar.DAY_OF_MONTH)
     }
 
-    val formattedSelectedDate = remember(selectedYear, selectedMonth, selectedDay) {
+    val formattedSelectedDate = remember(selectedYear, selectedMonth, selectedDay, isEn) {
         val cal = Calendar.getInstance()
         cal.set(selectedYear, selectedMonth, selectedDay.coerceIn(1, maxDaysInSelectedMonth))
-        SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID")).format(cal.time)
+        SimpleDateFormat("EEEE, dd MMM yyyy", if (isEn) Locale.ENGLISH else Locale("id", "ID")).format(cal.time)
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -395,7 +410,7 @@ fun DateAndMonthFilterControlCard(
                                 .padding(horizontal = 10.dp)
                         ) {
                             Text(
-                                text = "${MONTH_NAMES_ID[selectedMonth]} $selectedYear",
+                                text = "${monthName(selectedMonth)} $selectedYear",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimaryDark
@@ -403,11 +418,14 @@ fun DateAndMonthFilterControlCard(
                             Text(
                                 text = when (selectedMode) {
                                     AnalyticsPeriodMode.SPECIFIC_DATE -> formattedSelectedDate
-                                    AnalyticsPeriodMode.SPECIFIC_MONTH -> "Performa 1 Bulan Penuh (${monthDayTxMap.values.sumOf { it.first }} Nota)"
-                                    AnalyticsPeriodMode.TODAY -> "Filter: Hari Ini"
-                                    AnalyticsPeriodMode.DAYS_7 -> "Filter: 7 Hari Terakhir"
-                                    AnalyticsPeriodMode.DAYS_30 -> "Filter: 30 Hari Terakhir"
-                                    AnalyticsPeriodMode.ALL -> "Filter: Semua Waktu (Ketuk tgl untuk detail)"
+                                    AnalyticsPeriodMode.SPECIFIC_MONTH -> tr(
+                                        "Performa 1 Bulan Penuh (${monthDayTxMap.values.sumOf { it.first }} Nota)",
+                                        "Full Month Performance (${monthDayTxMap.values.sumOf { it.first }} Receipts)"
+                                    )
+                                    AnalyticsPeriodMode.TODAY -> tr("Filter: Hari Ini", "Filter: Today")
+                                    AnalyticsPeriodMode.DAYS_7 -> tr("Filter: 7 Hari Terakhir", "Filter: Last 7 Days")
+                                    AnalyticsPeriodMode.DAYS_30 -> tr("Filter: 30 Hari Terakhir", "Filter: Last 30 Days")
+                                    AnalyticsPeriodMode.ALL -> tr("Filter: Semua Waktu (Ketuk tgl untuk detail)", "Filter: All Time (Tap date for details)")
                                 },
                                 fontSize = 10.5.sp,
                                 color = SupabaseGreen
@@ -497,13 +515,13 @@ fun DateAndMonthFilterControlCard(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = "1 BULAN",
+                                    text = tr("1 BULAN", "1 MONTH"),
                                     fontSize = 9.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isMonthFullSelected) Color(0xFF042114) else TextSecondaryDark
                                 )
                                 Text(
-                                    text = MONTH_SHORT_ID[selectedMonth],
+                                    text = monthShort(selectedMonth),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = if (isMonthFullSelected) Color(0xFF042114) else TextPrimaryDark
@@ -563,7 +581,7 @@ fun DateAndMonthFilterControlCard(
                                     )
                                 } else {
                                     Text(
-                                        text = MONTH_SHORT_ID[selectedMonth],
+                                        text = monthShort(selectedMonth),
                                         fontSize = 8.5.sp,
                                         color = if (isDateSelected) Color(0xFF042114) else TextMutedDark
                                     )
@@ -585,7 +603,7 @@ fun DateAndMonthFilterControlCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "◀ Hari Sebelumnya",
+                            text = tr("◀ Hari Sebelumnya", "◀ Prev Day"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = SupabaseGreen,
@@ -612,7 +630,7 @@ fun DateAndMonthFilterControlCard(
                         )
 
                         Text(
-                            text = "Hari Berikutnya ▶",
+                            text = tr("Hari Berikutnya ▶", "Next Day ▶"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = SupabaseGreen,
@@ -670,8 +688,8 @@ fun CalendarDateMonthPickerModal(
     }
 
     // Recent active dates across all history so user can jump directly to any past date with data
-    val recentActiveDates = remember(allTransactions) {
-        val fmt = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+    val recentActiveDates = remember(allTransactions, isEnglishLanguageActive) {
+        val fmt = SimpleDateFormat("dd MMM yyyy", if (isEnglishLanguageActive) Locale.ENGLISH else Locale("id", "ID"))
         val cal = Calendar.getInstance()
         allTransactions
             .groupBy {
@@ -685,7 +703,7 @@ fun CalendarDateMonthPickerModal(
                 cal.set(ymd.first, ymd.second, ymd.third)
                 val label = fmt.format(cal.time)
                 val rev = list.sumOf { it.header.total_sold_amount }
-                Triple(ymd, "$label (${list.size} nota)", rev)
+                Triple(ymd, tr("$label (${list.size} nota)", "$label (${list.size} tx)"), rev)
             }
     }
 
@@ -731,19 +749,19 @@ fun CalendarDateMonthPickerModal(
                 ) {
                     Column {
                         Text(
-                            text = "Pilih Tanggal & Bulan Analisis",
+                            text = tr("Pilih Tanggal & Bulan Analisis", "Select Analysis Date & Month"),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryDark
                         )
                         Text(
-                            text = "Titik hijau menandakan tanggal dengan riwayat transaksi",
+                            text = tr("Titik hijau menandakan tanggal dengan riwayat transaksi", "Green dots indicate dates with transaction history"),
                             fontSize = 11.sp,
                             color = SupabaseGreen
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextSecondaryDark)
+                        Icon(Icons.Default.Close, contentDescription = tr("Tutup", "Close"), tint = TextSecondaryDark)
                     }
                 }
 
@@ -774,7 +792,7 @@ fun CalendarDateMonthPickerModal(
                     }
 
                     Text(
-                        text = "${MONTH_NAMES_ID[pickerMonth]} $pickerYear",
+                        text = "${monthName(pickerMonth)} $pickerYear",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimaryDark
@@ -816,7 +834,7 @@ fun CalendarDateMonthPickerModal(
                             color = if (selected) SupabaseGreen.copy(alpha = 0.16f) else CharcoalSurfaceElevated
                         ) {
                             Text(
-                                text = MONTH_SHORT_ID[mIdx],
+                                text = monthShort(mIdx),
                                 fontSize = 11.5.sp,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (selected) SupabaseGreen else TextSecondaryDark,
@@ -830,7 +848,12 @@ fun CalendarDateMonthPickerModal(
 
                 // Day of week header (Sen..Min)
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min").forEach { dName ->
+                    val dayHeaders = if (isEnglishLanguageActive) {
+                        listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                    } else {
+                        listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+                    }
+                    dayHeaders.forEach { dName ->
                         Text(
                             text = dName,
                             fontSize = 10.5.sp,
@@ -914,7 +937,7 @@ fun CalendarDateMonthPickerModal(
                 if (recentActiveDates.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Pintasan Tanggal dengan Riwayat Transaksi:",
+                        text = tr("Pintasan Tanggal dengan Riwayat Transaksi:", "Quick Jump to Active History Dates:"),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextSecondaryDark
@@ -961,7 +984,7 @@ fun CalendarDateMonthPickerModal(
                         border = androidx.compose.foundation.BorderStroke(1.dp, SupabaseGreen)
                     ) {
                         Text(
-                            text = "Analisis Bulan ${MONTH_SHORT_ID[pickerMonth]}",
+                            text = tr("Analisis Bulan ${monthShort(pickerMonth)}", "Analyze ${monthShort(pickerMonth)} Month"),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -977,7 +1000,7 @@ fun CalendarDateMonthPickerModal(
                         )
                     ) {
                         Text(
-                            text = "Lihat Tgl $pickerDay ${MONTH_SHORT_ID[pickerMonth]}",
+                            text = tr("Lihat Tgl $pickerDay ${monthShort(pickerMonth)}", "View $pickerDay ${monthShort(pickerMonth)}"),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1043,7 +1066,7 @@ fun HistoricalPerformanceLogCard(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "${dailySummaries.size} Hari Aktif",
+                        text = tr("${dailySummaries.size} Hari Aktif", "${dailySummaries.size} Active Days"),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = SupabaseGreen
@@ -1071,7 +1094,7 @@ fun HistoricalPerformanceLogCard(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Belum Ada Riwayat Transaksi pada Periode/Tanggal Ini",
+                            text = tr("Belum Ada Riwayat Transaksi pada Periode/Tanggal Ini", "No Transaction History on This Date/Period"),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryDark,
@@ -1079,7 +1102,7 @@ fun HistoricalPerformanceLogCard(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Gunakan tombol Kalender di atas atau geser tanggal/bulan untuk melihat riwayat performa di tanggal lainnya.",
+                            text = tr("Gunakan tombol Kalender di atas atau geser tanggal/bulan untuk melihat riwayat performa di tanggal lainnya.", "Use the Calendar button above or swipe dates/months to inspect historical performance."),
                             fontSize = 11.sp,
                             color = TextSecondaryDark,
                             textAlign = TextAlign.Center
@@ -1147,7 +1170,10 @@ private fun DailyPerformanceAccordionItem(
                         color = TextPrimaryDark
                     )
                     Text(
-                        text = "${daySummary.transactions.size} Kunjungan • Laku ${daySummary.totalSoldPieces} Pcs • Titip +${daySummary.totalAddedPieces} Pcs",
+                        text = tr(
+                            "${daySummary.transactions.size} Kunjungan • Laku ${daySummary.totalSoldPieces} Pcs • Titip +${daySummary.totalAddedPieces} Pcs",
+                            "${daySummary.transactions.size} Visits • Sold ${daySummary.totalSoldPieces} Pcs • Added +${daySummary.totalAddedPieces} Pcs"
+                        ),
                         fontSize = 10.5.sp,
                         color = TextSecondaryDark
                     )
@@ -1162,7 +1188,7 @@ private fun DailyPerformanceAccordionItem(
                             color = SupabaseGreen
                         )
                         Text(
-                            text = "Laba: Rp %,.0f".format(daySummary.netProfit),
+                            text = "${tr("Laba", "Profit")}: Rp %,.0f".format(daySummary.netProfit),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (daySummary.netProfit >= 0) BlueInfo else RoseError
@@ -1193,19 +1219,19 @@ private fun DailyPerformanceAccordionItem(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Omset", fontSize = 9.5.sp, color = TextMutedDark)
+                        Text(tr("Omset", "Revenue"), fontSize = 9.5.sp, color = TextMutedDark)
                         Text("Rp %,.0f".format(daySummary.totalRevenue), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = SupabaseGreen)
                     }
                     Column {
-                        Text("Modal HPP", fontSize = 9.5.sp, color = TextMutedDark)
+                        Text(tr("Modal HPP", "COGS"), fontSize = 9.5.sp, color = TextMutedDark)
                         Text("Rp %,.0f".format(daySummary.totalHpp), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = AmberWarning)
                     }
                     Column {
-                        Text("Operasional", fontSize = 9.5.sp, color = TextMutedDark)
+                        Text(tr("Operasional", "Expenses"), fontSize = 9.5.sp, color = TextMutedDark)
                         Text("Rp %,.0f".format(daySummary.totalOpEx), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = RoseError)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Setoran Kas", fontSize = 9.5.sp, color = TextMutedDark)
+                        Text(tr("Setoran Kas", "Cash Paid"), fontSize = 9.5.sp, color = TextMutedDark)
                         Text("Rp %,.0f".format(daySummary.totalPaid), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
                     }
                 }
@@ -1231,7 +1257,7 @@ private fun DailyPerformanceAccordionItem(
                             Icon(Icons.Default.ShowChart, contentDescription = null, tint = SupabaseGreen, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Tampilkan Grafik Khusus Tanggal Ini",
+                                text = tr("Tampilkan Grafik Khusus Tanggal Ini", "Show Charts for This Date"),
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = SupabaseGreen
@@ -1307,7 +1333,10 @@ private fun DailyPerformanceAccordionItem(
                                             modifier = Modifier.weight(1f)
                                         )
                                         Text(
-                                            text = "Laku ${d.sold_quantity} | Sisa ${d.remaining_stock} | +Titip ${d.added_quantity}",
+                                            text = tr(
+                                                "Laku ${d.sold_quantity} | Sisa ${d.remaining_stock} | +Titip ${d.added_quantity}",
+                                                "Sold ${d.sold_quantity} | Rem ${d.remaining_stock} | +Add ${d.added_quantity}"
+                                            ),
                                             fontSize = 10.sp,
                                             color = TextPrimaryDark
                                         )
@@ -1344,7 +1373,7 @@ private fun DailyPerformanceAccordionItem(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Pengeluaran ($timeStr): ${exp.description}",
+                                text = "${tr("Pengeluaran", "Expense")} ($timeStr): ${exp.description}",
                                 fontSize = 11.sp,
                                 color = TextPrimaryDark,
                                 modifier = Modifier.weight(1f)
@@ -1375,14 +1404,14 @@ fun formatPeriodLabel(
             cal.set(year, month, 1)
             val maxD = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
             cal.set(year, month, day.coerceIn(1, maxD))
-            val fmt = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
-            "Tanggal Spesifik: ${fmt.format(cal.time)}"
+            val fmt = SimpleDateFormat("EEEE, dd MMMM yyyy", if (isEnglishLanguageActive) Locale.ENGLISH else Locale("id", "ID"))
+            "${tr("Tanggal Spesifik", "Specific Date")}: ${fmt.format(cal.time)}"
         }
-        AnalyticsPeriodMode.SPECIFIC_MONTH -> "Bulan Spesifik: ${MONTH_NAMES_ID[month]} $year"
-        AnalyticsPeriodMode.TODAY -> "Periode: Hari Ini"
-        AnalyticsPeriodMode.DAYS_7 -> "Periode: 7 Hari Terakhir"
-        AnalyticsPeriodMode.DAYS_30 -> "Periode: 30 Hari Terakhir"
-        AnalyticsPeriodMode.ALL -> "Periode: Semua Waktu (Riwayat Penuh)"
+        AnalyticsPeriodMode.SPECIFIC_MONTH -> "${tr("Bulan Spesifik", "Specific Month")}: ${monthName(month)} $year"
+        AnalyticsPeriodMode.TODAY -> tr("Periode: Hari Ini", "Period: Today")
+        AnalyticsPeriodMode.DAYS_7 -> tr("Periode: 7 Hari Terakhir", "Period: Last 7 Days")
+        AnalyticsPeriodMode.DAYS_30 -> tr("Periode: 30 Hari Terakhir", "Period: Last 30 Days")
+        AnalyticsPeriodMode.ALL -> tr("Periode: Semua Waktu (Riwayat Penuh)", "Period: All Time (Full History)")
     }
 }
 
@@ -1512,9 +1541,9 @@ fun DailyPerformanceBarChartCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (isEn) {
-                                "Daily Performance Chart (${MONTH_NAMES_ID[selectedMonth]} $selectedYear)"
+                                "Daily Performance Chart (${monthName(selectedMonth)} $selectedYear)"
                             } else {
-                                "Grafik Performa Harian (${MONTH_NAMES_ID[selectedMonth]} $selectedYear)"
+                                "Grafik Performa Harian (${monthName(selectedMonth)} $selectedYear)"
                             },
                             fontSize = 14.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -1542,7 +1571,7 @@ fun DailyPerformanceBarChartCard(
                     color = if (showOnlyActiveDays) SupabaseGreen.copy(alpha = 0.16f) else CharcoalSurfaceElevated
                 ) {
                     Text(
-                        text = if (showOnlyActiveDays) "Tgl Aktif" else "1–$maxDays ${MONTH_SHORT_ID[selectedMonth]}",
+                        text = if (showOnlyActiveDays) tr("Tgl Aktif", "Active Days") else "1–$maxDays ${monthShort(selectedMonth)}",
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = SupabaseGreen,
@@ -1571,9 +1600,10 @@ fun DailyPerformanceBarChartCard(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Tgl %02d %s %d".format(
+                                text = "%s %02d %s %d".format(
+                                    tr("Tgl", "Date"),
                                     inspectedEntry.dayOfMonth,
-                                    MONTH_NAMES_ID[selectedMonth],
+                                    monthName(selectedMonth),
                                     selectedYear
                                 ),
                                 fontSize = 12.sp,
@@ -1581,7 +1611,10 @@ fun DailyPerformanceBarChartCard(
                                 color = TextPrimaryDark
                             )
                             Text(
-                                text = "${inspectedEntry.visitCount} Nota • Laku ${inspectedEntry.soldPcs} Pcs • Kas Rp %,.0f".format(inspectedEntry.paid),
+                                text = tr(
+                                    "${inspectedEntry.visitCount} Nota • Laku ${inspectedEntry.soldPcs} Pcs • Kas Rp %,.0f".format(inspectedEntry.paid),
+                                    "${inspectedEntry.visitCount} Receipts • Sold ${inspectedEntry.soldPcs} Pcs • Cash Rp %,.0f".format(inspectedEntry.paid)
+                                ),
                                 fontSize = 10.sp,
                                 color = TextSecondaryDark
                             )
@@ -1592,7 +1625,7 @@ fun DailyPerformanceBarChartCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("Omset", fontSize = 9.5.sp, color = TextMutedDark)
+                                Text(tr("Omset", "Revenue"), fontSize = 9.5.sp, color = TextMutedDark)
                                 Text(
                                     text = "Rp %,.0f".format(inspectedEntry.revenue),
                                     fontSize = 11.5.sp,
@@ -1601,7 +1634,7 @@ fun DailyPerformanceBarChartCard(
                                 )
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("Laba", fontSize = 9.5.sp, color = TextMutedDark)
+                                Text(tr("Laba", "Profit"), fontSize = 9.5.sp, color = TextMutedDark)
                                 Text(
                                     text = "Rp %,.0f".format(inspectedEntry.netProfit),
                                     fontSize = 11.5.sp,
@@ -1713,7 +1746,7 @@ fun DailyPerformanceBarChartCard(
                             }
                         )
                         Text(
-                            text = MONTH_SHORT_ID[selectedMonth],
+                            text = monthShort(selectedMonth),
                             fontSize = 8.5.sp,
                             color = TextMutedDark
                         )

@@ -68,6 +68,7 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.tr
 import com.example.ui.viewmodel.AnalyticsViewModel
 import com.example.ui.viewmodel.AppLanguage
 import com.example.util.BackupRestoreManager
@@ -117,14 +118,14 @@ fun BackupRestoreDialog(
                                 color = TextPrimaryDark
                             )
                             Text(
-                                text = "Database Lengkap + Semua Foto Warung & Kunjungan",
+                                text = tr("Database Lengkap + Semua Foto Warung & Kunjungan", "Full Database + All Store & Visit Photos"),
                                 fontSize = 10.5.sp,
                                 color = TextSecondaryDark
                             )
                         }
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextSecondaryDark, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Close, contentDescription = tr("Tutup", "Close"), tint = TextSecondaryDark, modifier = Modifier.size(18.dp))
                     }
                 }
 
@@ -405,7 +406,7 @@ fun BackupRestoreSectionContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = uiState.backupStatusMessage ?: "Memproses...",
+                    text = uiState.backupStatusMessage ?: tr("Memproses...", "Processing..."),
                     fontSize = 11.sp,
                     color = TextSecondaryDark
                 )

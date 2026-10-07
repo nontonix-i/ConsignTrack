@@ -122,6 +122,9 @@ import com.example.ui.theme.SupabaseGreen
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.theme.TextPrimaryDark
 import com.example.ui.theme.TextSecondaryDark
+import com.example.ui.theme.isEnglishLanguageActive
+import com.example.ui.theme.tr
+import com.example.ui.theme.trDay
 import com.example.ui.viewmodel.CustomerSortOption
 import com.example.ui.viewmodel.DashboardViewModel
 import com.example.ui.viewmodel.RouteFilter
@@ -182,7 +185,7 @@ fun DashboardScreen(
                 contentColor = Color(0xFF042114),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Toko")
+                Icon(Icons.Default.Add, contentDescription = tr("Tambah Toko", "Add Store"))
             }
         }
     ) { innerPadding ->
@@ -201,7 +204,7 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Rute Distribusi",
+                    text = tr("Rute Distribusi", "Distribution Route"),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark
@@ -217,10 +220,10 @@ fun DashboardScreen(
                             .background(SupabaseGreen, RoundedCornerShape(8.dp))
                             .clickable {
                                 viewModel.instantAutoAddWarungWithGps { createdName, hasGps ->
-                                    val gpsInfo = if (hasGps) "beserta koordinat GPS" else "(tanpa titik GPS)"
+                                    val gpsInfo = if (hasGps) tr("beserta koordinat GPS", "with GPS coordinates") else tr("(tanpa titik GPS)", "(without GPS)")
                                     Toast.makeText(
                                         context,
-                                        "⚡ $createdName otomatis ditambahkan $gpsInfo!",
+                                        tr("⚡ $createdName otomatis ditambahkan $gpsInfo!", "⚡ $createdName auto-added $gpsInfo!"),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -230,13 +233,13 @@ fun DashboardScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.MyLocation,
-                                contentDescription = "Auto Add Cepat Warung + GPS",
+                                contentDescription = tr("Auto Add Cepat Warung + GPS", "Quick Auto-Add Store + GPS"),
                                 tint = Color(0xFF042114),
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "+ Auto Warung GPS",
+                                text = tr("+ Auto Warung GPS", "+ Auto Store GPS"),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF042114)
@@ -275,7 +278,7 @@ fun DashboardScreen(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "${uiState.allCustomers.size} Toko",
+                            text = tr("${uiState.allCustomers.size} Toko", "${uiState.allCustomers.size} Stores"),
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimaryDark
@@ -313,7 +316,10 @@ fun DashboardScreen(
                             text = if (loc != null) {
                                 "${uiState.gpsProviderLabel} $accText • $coordsText"
                             } else {
-                                "Mencari titik GPS (${if (uiState.isOnline) "Online Fused" else "Satelit Offline"})..."
+                                tr(
+                                    "Mencari titik GPS (${if (uiState.isOnline) "Online Fused" else "Satelit Offline"})...",
+                                    "Acquiring GPS (${if (uiState.isOnline) "Online Fused" else "Offline Satellite"})..."
+                                )
                             },
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Medium,
@@ -323,7 +329,7 @@ fun DashboardScreen(
                         if (uiState.pendingOfflineAddressCount > 0 && !uiState.isOnline) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "• ${uiState.pendingOfflineAddressCount} antre alamat",
+                                text = tr("• ${uiState.pendingOfflineAddressCount} antre alamat", "• ${uiState.pendingOfflineAddressCount} pending addresses"),
                                 fontSize = 10.sp,
                                 color = AmberWarning,
                                 maxLines = 1
@@ -343,7 +349,7 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(3.dp))
                         }
                         Text(
-                            text = if (uiState.isOnline) "Akurat" else "Offline",
+                            text = if (uiState.isOnline) tr("Akurat", "Accurate") else "Offline",
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = SupabaseGreen
@@ -373,13 +379,13 @@ fun DashboardScreen(
                         Icon(Icons.Default.NearMe, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(13.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "GPS Nonaktif",
+                            text = tr("GPS Nonaktif", "GPS Disabled"),
                             fontSize = 11.sp,
                             color = Color(0xFF38BDF8)
                         )
                     }
                     Text(
-                        text = "Aktifkan",
+                        text = tr("Aktifkan", "Enable"),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF38BDF8)
@@ -398,14 +404,14 @@ fun DashboardScreen(
             ) {
                 MetricMiniCard(
                     modifier = Modifier.weight(1f),
-                    label = "Total Stok",
+                    label = tr("Total Stok", "Total Stock"),
                     value = "${uiState.totalPiecesConsigned} pcs",
                     icon = Icons.Default.Inventory2,
                     accent = SupabaseGreen
                 )
                 MetricMiniCard(
                     modifier = Modifier.weight(1f),
-                    label = "Omset Hari Ini",
+                    label = tr("Omset Hari Ini", "Today's Sales"),
                     value = "Rp %,.0f".format(uiState.todayTotalSoldAmount),
                     icon = Icons.Default.Store,
                     accent = Color(0xFF38BDF8)
@@ -437,13 +443,13 @@ fun DashboardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Rute: ${uiState.selectedDay}",
+                            text = "${tr("Rute", "Route")}: ${trDay(uiState.selectedDay)}",
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextSecondaryDark
                         )
                         Text(
-                            text = "Hari Ini",
+                            text = tr("Hari Ini", "Today"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = SupabaseGreen,
@@ -470,7 +476,7 @@ fun DashboardScreen(
                             label = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = day,
+                                        text = trDay(day),
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -485,7 +491,7 @@ fun DashboardScreen(
                                                 .padding(horizontal = 3.dp, vertical = 0.5.dp)
                                         ) {
                                             Text(
-                                                text = "KINI",
+                                                text = tr("KINI", "TODAY"),
                                                 fontSize = 8.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (isSelected) SupabaseGreen else Color(0xFF042114)
@@ -518,9 +524,9 @@ fun DashboardScreen(
 
             // Status Filter Tabs (Semua, Belum, Selesai)
             val tabs = listOf(
-                "Semua (${uiState.filteredCustomers.size})",
-                "Belum",
-                "Selesai"
+                tr("Semua (${uiState.filteredCustomers.size})", "All (${uiState.filteredCustomers.size})"),
+                tr("Belum", "Pending"),
+                tr("Selesai", "Visited")
             )
             val selectedTabIndex = when (uiState.filter) {
                 RouteFilter.ALL -> 0
@@ -579,7 +585,7 @@ fun DashboardScreen(
             ) {
                 Icon(
                     Icons.Default.Sort,
-                    contentDescription = "Urutkan",
+                    contentDescription = tr("Urutkan", "Sort"),
                     tint = TextSecondaryDark,
                     modifier = Modifier.size(14.dp)
                 )
@@ -647,9 +653,9 @@ fun DashboardScreen(
                         )
                         Text(
                             text = if (uiState.allCustomers.isEmpty()) {
-                                "Data Warung Masih Kosong (Pre-Production)"
+                                tr("Data Warung Masih Kosong (Pre-Production)", "No Stores Yet (Pre-Production)")
                             } else {
-                                "Tidak ada warung di rute ${uiState.selectedDay}"
+                                tr("Tidak ada warung di rute ${uiState.selectedDay}", "No stores on ${trDay(uiState.selectedDay)} route")
                             },
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -657,9 +663,9 @@ fun DashboardScreen(
                         )
                         Text(
                             text = if (uiState.allCustomers.isEmpty()) {
-                                "Tambahkan warung baru atau pulihkan data & foto dari file Backup .ZIP"
+                                tr("Tambahkan warung baru atau pulihkan data & foto dari file Backup .ZIP", "Add a new store or restore data & photos from a Backup .ZIP file")
                             } else {
-                                "Pilih hari rute lain atau tambah warung baru"
+                                tr("Pilih hari rute lain atau tambah warung baru", "Select another route day or add a new store")
                             },
                             fontSize = 11.5.sp,
                             color = TextSecondaryDark
@@ -678,16 +684,16 @@ fun DashboardScreen(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Tambah Warung", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(tr("Tambah Warung", "Add Store"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     viewModel.instantAutoAddWarungWithGps { createdName, hasGps ->
-                                        val gpsInfo = if (hasGps) "+ Koordinat GPS" else "(Tanpa GPS)"
+                                        val gpsInfo = if (hasGps) tr("+ Koordinat GPS", "+ GPS Coords") else tr("(Tanpa GPS)", "(No GPS)")
                                         Toast.makeText(
                                             context,
-                                            "⚡ $createdName otomatis ditambahkan $gpsInfo!",
+                                            tr("⚡ $createdName otomatis ditambahkan $gpsInfo!", "⚡ $createdName auto-added $gpsInfo!"),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -750,12 +756,12 @@ fun DashboardScreen(
         }
     }
 
-    // Add Customer Dialog with Smart Auto-Naming, GPS Auto-Fill & Bulk Product Selection
+    // Add Customer Dialog with Smart Auto-Naming (3-Char Unique Code + Lat/Lng), GPS Auto-Fill & Bulk Product Selection
     if (showAddDialog) {
         AddCustomerWithRouteDialog(
             defaultDay = if (uiState.selectedDay == "Semua") uiState.todayDayName else uiState.selectedDay,
             nextRouteOrder = (uiState.filteredCustomers.maxOfOrNull { it.customer.route_order } ?: 0) + 1,
-            nextGlobalWarungNumber = uiState.allCustomers.size + 1,
+            existingCustomerNames = uiState.allCustomers.map { it.customer.name },
             allProducts = uiState.allProducts,
             currentDeviceLocation = uiState.userLocation,
             onDismiss = { showAddDialog = false },
@@ -782,7 +788,10 @@ fun DashboardScreen(
                 viewModel.bulkAddProductsToCustomer(targetItem.customer.id, additions)
                 Toast.makeText(
                     context,
-                    "✅ ${bulkList.size} produk berhasil ditambahkan ke ${targetItem.customer.name}!",
+                    tr(
+                        "✅ ${bulkList.size} produk berhasil ditambahkan ke ${targetItem.customer.name}!",
+                        "✅ ${bulkList.size} products added to ${targetItem.customer.name}!"
+                    ),
                     Toast.LENGTH_SHORT
                 ).show()
                 bulkProductTargetItem = null
@@ -813,7 +822,7 @@ fun DashboardScreen(
     if (photoTargetCustomerId != null) {
         val targetCust = uiState.allCustomers.find { it.customer.id == photoTargetCustomerId }?.customer
         PhotoChooserBottomSheet(
-            title = "Foto Toko: ${targetCust?.name ?: ""}",
+            title = tr("Foto Toko: ${targetCust?.name ?: ""}", "Store Photo: ${targetCust?.name ?: ""}"),
             hasExistingPhoto = !targetCust?.photo_uri.isNullOrBlank(),
             existingPhotoUri = targetCust?.photo_uri,
             onPhotoSelected = { uri ->
@@ -832,7 +841,7 @@ fun DashboardScreen(
     if (selectedPerformanceCustomerName != null) {
         CustomerPerformanceDialog(
             performance = selectedPerformance,
-            customerName = selectedPerformanceCustomerName ?: "Warung",
+            customerName = selectedPerformanceCustomerName ?: tr("Warung", "Store"),
             onDismiss = { viewModel.closeCustomerPerformance() }
         )
     }
@@ -947,14 +956,14 @@ private fun CustomerRouteCard(
                         if (hasPhoto) {
                             AsyncImage(
                                 model = item.customer.photo_uri,
-                                contentDescription = "Foto ${item.customer.name}",
+                                contentDescription = tr("Foto ${item.customer.name}", "Photo ${item.customer.name}"),
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
                             Icon(
                                 Icons.Default.AddAPhoto,
-                                contentDescription = "Foto Warung",
+                                contentDescription = tr("Foto Warung", "Store Photo"),
                                 tint = TextMutedDark,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -976,7 +985,7 @@ private fun CustomerRouteCard(
                             if (item.hasVisitedToday) {
                                 Icon(
                                     Icons.Default.CheckCircle,
-                                    contentDescription = "Selesai",
+                                    contentDescription = tr("Selesai", "Visited"),
                                     tint = SupabaseGreen,
                                     modifier = Modifier.size(14.dp)
                                 )
@@ -988,7 +997,7 @@ private fun CustomerRouteCard(
                         // Sub-baris minimalis: #Urut • Hari • Alamat / Jarak GPS
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "#${item.customer.route_order} ${item.customer.route_day}",
+                                text = "#${item.customer.route_order} ${trDay(item.customer.route_day)}",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = SupabaseGreen
@@ -1017,7 +1026,7 @@ private fun CustomerRouteCard(
                                 )
                             } else if (hasGps) {
                                 Text(
-                                    text = " • Auto-Alamat (GPS)",
+                                    text = tr(" • Auto-Alamat (GPS)", " • Auto-Address (GPS)"),
                                     fontSize = 10.5.sp,
                                     color = TextMutedDark,
                                     maxLines = 1
@@ -1049,7 +1058,7 @@ private fun CustomerRouteCard(
                         ) {
                             Icon(
                                 Icons.Default.Phone,
-                                contentDescription = "Telepon",
+                                contentDescription = tr("Telepon", "Call"),
                                 tint = SupabaseGreen,
                                 modifier = Modifier.size(15.dp)
                             )
@@ -1061,7 +1070,7 @@ private fun CustomerRouteCard(
                     ) {
                         Icon(
                             Icons.Default.Insights,
-                            contentDescription = "Riwayat",
+                            contentDescription = tr("Riwayat", "History"),
                             tint = AmberWarning,
                             modifier = Modifier.size(16.dp)
                         )
@@ -1072,7 +1081,7 @@ private fun CustomerRouteCard(
                     ) {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Edit Warung",
+                            contentDescription = tr("Edit Warung", "Edit Store"),
                             tint = TextSecondaryDark,
                             modifier = Modifier.size(15.dp)
                         )
@@ -1102,9 +1111,9 @@ private fun CustomerRouteCard(
                 ) {
                     Text(
                         text = if (item.totalActiveStock > 0) {
-                            "Titip Lalu: ${item.totalActiveStock} pcs"
+                            tr("Titip Lalu: ${item.totalActiveStock} pcs", "Consigned: ${item.totalActiveStock} pcs")
                         } else {
-                            "Titip Lalu: Kosong"
+                            tr("Titip Lalu: Kosong", "Consigned: Empty")
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -1117,7 +1126,7 @@ private fun CustomerRouteCard(
                     ) {
                         if (item.customPricesByProduct.isNotEmpty()) {
                             Text(
-                                text = "${item.customPricesByProduct.size} Harga Khusus",
+                                text = tr("${item.customPricesByProduct.size} Harga Khusus", "${item.customPricesByProduct.size} Custom Prices"),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = AmberWarning
@@ -1131,14 +1140,14 @@ private fun CustomerRouteCard(
                                 .padding(horizontal = 7.dp, vertical = 2.5.dp)
                         ) {
                             Text(
-                                text = "+ Bulk Produk",
+                                text = tr("+ Bulk Produk", "+ Bulk Products"),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = SupabaseGreen
                             )
                         }
                         Text(
-                            text = "Atur Stok",
+                            text = tr("Atur Stok", "Edit Stock"),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextSecondaryDark
@@ -1193,13 +1202,14 @@ private fun CustomerRouteCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val lastVisitLabel = remember(item.lastVisitDate, item.lastTransactionAmount) {
+                val lastVisitLabel = remember(item.lastVisitDate, item.lastTransactionAmount, isEnglishLanguageActive) {
                     if (item.lastVisitDate != null) {
-                        val d = java.text.SimpleDateFormat("dd MMM", Locale.forLanguageTag("id-ID")).format(java.util.Date(item.lastVisitDate))
+                        val loc = if (isEnglishLanguageActive) Locale.ENGLISH else Locale.forLanguageTag("id-ID")
+                        val d = java.text.SimpleDateFormat("dd MMM", loc).format(java.util.Date(item.lastVisitDate))
                         val amt = item.lastTransactionAmount?.let { " • Rp %,.0f".format(it) } ?: ""
-                        "Lalu: $d$amt"
+                        if (isEnglishLanguageActive) "Last: $d$amt" else "Lalu: $d$amt"
                     } else {
-                        "Belum pernah dikunjungi"
+                        if (isEnglishLanguageActive) "Never visited" else "Belum pernah dikunjungi"
                     }
                 }
 
@@ -1221,7 +1231,7 @@ private fun CustomerRouteCard(
                     modifier = Modifier.height(34.dp)
                 ) {
                     Text(
-                        text = if (item.hasVisitedToday) "Buka Lagi" else "Kunjungan",
+                        text = if (item.hasVisitedToday) tr("Buka Lagi", "Reopen") else tr("Kunjungan", "Visit"),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1245,7 +1255,7 @@ private fun CustomerRouteCard(
 private fun AddCustomerWithRouteDialog(
     defaultDay: String,
     nextRouteOrder: Int,
-    nextGlobalWarungNumber: Int,
+    existingCustomerNames: List<String>,
     allProducts: List<Product>,
     currentDeviceLocation: android.location.Location?,
     onDismiss: () -> Unit,
@@ -1261,8 +1271,26 @@ private fun AddCustomerWithRouteDialog(
         initialProducts: List<Triple<Long, Int, Double?>>
     ) -> Unit
 ) {
-    val defaultAutoName = remember(nextGlobalWarungNumber) {
-        "Warung #%02d".format(nextGlobalWarungNumber)
+    var uniqueCode by remember {
+        mutableStateOf(LocationHelper.generateUniqueWarungCode(existingCustomerNames))
+    }
+    var useLongitudeForAutoName by remember { mutableStateOf(false) }
+    var isAutoCoordNameActive by remember { mutableStateOf(true) }
+
+    var latitudeStr by remember {
+        mutableStateOf(currentDeviceLocation?.latitude?.let { "%.6f".format(Locale.US, it) } ?: "")
+    }
+    var longitudeStr by remember {
+        mutableStateOf(currentDeviceLocation?.longitude?.let { "%.6f".format(Locale.US, it) } ?: "")
+    }
+
+    val defaultAutoName = remember(uniqueCode, latitudeStr, longitudeStr, useLongitudeForAutoName) {
+        LocationHelper.formatWarungAutoCoordNameFromStr(
+            uniqueCode = uniqueCode,
+            latitudeStr = latitudeStr,
+            longitudeStr = longitudeStr,
+            useLongitude = useLongitudeForAutoName
+        )
     }
 
     var name by remember { mutableStateOf(defaultAutoName) }
@@ -1273,14 +1301,14 @@ private fun AddCustomerWithRouteDialog(
     var photoUri by remember { mutableStateOf<String?>(null) }
     var showPhotoChooser by remember { mutableStateOf(false) }
     var dayDropdownExpanded by remember { mutableStateOf(false) }
-
-    var latitudeStr by remember {
-        mutableStateOf(currentDeviceLocation?.latitude?.let { "%.6f".format(Locale.US, it) } ?: "")
-    }
-    var longitudeStr by remember {
-        mutableStateOf(currentDeviceLocation?.longitude?.let { "%.6f".format(Locale.US, it) } ?: "")
-    }
     var lastAutoAddress by remember { mutableStateOf("") }
+
+    // Keep auto-generated name synced whenever GPS coordinates lock or uniqueCode/lat/lng preference changes
+    LaunchedEffect(defaultAutoName, isAutoCoordNameActive) {
+        if (isAutoCoordNameActive) {
+            name = defaultAutoName
+        }
+    }
 
     // Bulk Initial Product Checkboxes & Pack Quantities inside Add Warung Dialog
     val checkedProducts = remember(allProducts) {
@@ -1292,20 +1320,35 @@ private fun AddCustomerWithRouteDialog(
         }
     }
 
-    // Dynamic naming suggestions (including GPS street name if available)
-    val namingPresets = remember(nextGlobalWarungNumber, selectedDay, address) {
-        val numStr = "#%02d".format(nextGlobalWarungNumber)
+    // Dynamic naming suggestions: [CODE - Latitude], [CODE - Longitude], and optional street preset
+    val latAutoPreset = remember(uniqueCode, latitudeStr, longitudeStr) {
+        LocationHelper.formatWarungAutoCoordNameFromStr(
+            uniqueCode = uniqueCode,
+            latitudeStr = latitudeStr,
+            longitudeStr = longitudeStr,
+            useLongitude = false
+        )
+    }
+    val lngAutoPreset = remember(uniqueCode, latitudeStr, longitudeStr) {
+        LocationHelper.formatWarungAutoCoordNameFromStr(
+            uniqueCode = uniqueCode,
+            latitudeStr = latitudeStr,
+            longitudeStr = longitudeStr,
+            useLongitude = true
+        )
+    }
+    val namingPresets = remember(latAutoPreset, lngAutoPreset, uniqueCode, address) {
         val streetShort = address.split(",").firstOrNull()?.trim()?.take(18)?.takeIf {
-            it.isNotBlank() && !it.startsWith("Koordinat", ignoreCase = true) && !it.startsWith("-")
+            it.isNotBlank() && !it.startsWith("Koordinat", ignoreCase = true) && !it.startsWith("Coord", ignoreCase = true) && !it.startsWith("-")
         }
         buildList {
-            add("Warung $numStr")
-            if (streetShort != null) {
-                add("Warung $streetShort $numStr")
+            add(latAutoPreset)
+            if (lngAutoPreset != latAutoPreset) {
+                add(lngAutoPreset)
             }
-            add("Toko $numStr")
-            add("Warung $selectedDay $numStr")
-            add("Mitra $numStr")
+            if (streetShort != null) {
+                add("$uniqueCode - $streetShort")
+            }
         }.distinct()
     }
 
@@ -1326,13 +1369,13 @@ private fun AddCustomerWithRouteDialog(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Auto-Add Warung & Bulk Produk",
+                        text = tr("Auto-Add Warung & Bulk Produk", "Auto-Add Store & Bulk Products"),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimaryDark
                     )
                     Text(
-                        text = "Nama otomatis + titik GPS real-time + centang produk awal",
+                        text = tr("Nama otomatis + titik GPS real-time + centang produk awal", "Auto name + real-time GPS + bulk select initial products"),
                         fontSize = 11.sp,
                         color = SupabaseGreen
                     )
@@ -1369,14 +1412,17 @@ private fun AddCustomerWithRouteDialog(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Icon(Icons.Default.AddAPhoto, contentDescription = "Foto", tint = SupabaseGreen, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.AddAPhoto, contentDescription = tr("Foto", "Photo"), tint = SupabaseGreen, modifier = Modifier.size(18.dp))
                         }
                     }
 
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Nama Warung (Otomatis / Ketik)") },
+                        onValueChange = {
+                            name = it
+                            isAutoCoordNameActive = false
+                        },
+                        label = { Text(tr("Nama Otomatis (3 Kode Unik - Lat/Lng)", "Auto Name (3-Char Code - Lat/Lng)")) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
@@ -1388,13 +1434,18 @@ private fun AddCustomerWithRouteDialog(
                     )
                 }
 
-                // Quick Auto-Naming Chips
+                // Quick Auto-Naming Chips (3-Char Unique Code + Latitude / Longitude + Regenerate Code)
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(namingPresets) { preset ->
                         val isSelectedName = name == preset
+                        val chipLabel = when (preset) {
+                            latAutoPreset -> "$preset (Lat)"
+                            lngAutoPreset -> "$preset (Lng)"
+                            else -> preset
+                        }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
@@ -1404,14 +1455,54 @@ private fun AddCustomerWithRouteDialog(
                                     if (isSelectedName) SupabaseGreen else CharcoalBorder,
                                     RoundedCornerShape(6.dp)
                                 )
-                                .clickable { name = preset }
+                                .clickable {
+                                    when (preset) {
+                                        latAutoPreset -> {
+                                            useLongitudeForAutoName = false
+                                            isAutoCoordNameActive = true
+                                            name = latAutoPreset
+                                        }
+                                        lngAutoPreset -> {
+                                            useLongitudeForAutoName = true
+                                            isAutoCoordNameActive = true
+                                            name = lngAutoPreset
+                                        }
+                                        else -> {
+                                            isAutoCoordNameActive = false
+                                            name = preset
+                                        }
+                                    }
+                                }
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = preset,
+                                text = chipLabel,
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isSelectedName) Color(0xFF042114) else TextSecondaryDark
+                            )
+                        }
+                    }
+
+                    // Chip to generate a fresh 3-character alphanumeric unique code
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(CharcoalSurfaceElevated)
+                                .border(1.dp, SupabaseGreen.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                .clickable {
+                                    val newCode = LocationHelper.generateUniqueWarungCode(existingCustomerNames + uniqueCode)
+                                    uniqueCode = newCode
+                                    isAutoCoordNameActive = true
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = tr("🔄 Kode Baru ($uniqueCode)", "🔄 New Code ($uniqueCode)"),
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SupabaseGreen
                             )
                         }
                     }
@@ -1428,10 +1519,10 @@ private fun AddCustomerWithRouteDialog(
                         modifier = Modifier.weight(0.6f)
                     ) {
                         OutlinedTextField(
-                            value = selectedDay,
+                            value = trDay(selectedDay),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Hari Rute") },
+                            label = { Text(tr("Hari Rute", "Route Day")) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dayDropdownExpanded) },
                             singleLine = true,
                             modifier = Modifier
@@ -1451,7 +1542,7 @@ private fun AddCustomerWithRouteDialog(
                         ) {
                             listOf("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu").forEach { day ->
                                 DropdownMenuItem(
-                                    text = { Text(day, color = TextPrimaryDark) },
+                                    text = { Text(trDay(day), color = TextPrimaryDark) },
                                     onClick = {
                                         selectedDay = day
                                         dayDropdownExpanded = false
@@ -1464,7 +1555,7 @@ private fun AddCustomerWithRouteDialog(
                     OutlinedTextField(
                         value = routeOrder,
                         onValueChange = { routeOrder = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Urutan") },
+                        label = { Text(tr("Urutan", "Order #")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -1499,7 +1590,7 @@ private fun AddCustomerWithRouteDialog(
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },
-                    label = { Text("Alamat (Otomatis dari GPS / Ketik Manual)") },
+                    label = { Text(tr("Alamat (Otomatis dari GPS / Ketik Manual)", "Address (Auto from GPS / Manual)")) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SupabaseGreen,
@@ -1513,7 +1604,7 @@ private fun AddCustomerWithRouteDialog(
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("No. WhatsApp (Opsional)") },
+                    label = { Text(tr("No. WhatsApp (Opsional)", "WhatsApp / Phone (Optional)")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1545,13 +1636,13 @@ private fun AddCustomerWithRouteDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Bulk Pilih Produk Titipan Awal",
+                                    text = tr("Bulk Pilih Produk Titipan Awal", "Bulk Select Initial Consigned Products"),
                                     fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimaryDark
                                 )
                                 Text(
-                                    text = if (selectedCount > 0) "$selectedCount produk dipilih" else "Centang produk yang langsung dititipkan",
+                                    text = if (selectedCount > 0) tr("$selectedCount produk dipilih", "$selectedCount products selected") else tr("Centang produk yang langsung dititipkan", "Check products to consign immediately"),
                                     fontSize = 10.5.sp,
                                     color = if (selectedCount > 0) SupabaseGreen else TextSecondaryDark
                                 )
@@ -1575,7 +1666,7 @@ private fun AddCustomerWithRouteDialog(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = if (allChecked) "Batal Semua" else "Centang Semua",
+                                        text = if (allChecked) tr("Batal Semua", "Unselect All") else tr("Centang Semua", "Select All"),
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (allChecked) Color(0xFF042114) else SupabaseGreen
@@ -1589,7 +1680,7 @@ private fun AddCustomerWithRouteDialog(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Set Jumlah:", fontSize = 10.sp, color = TextMutedDark)
+                            Text(tr("Set Jumlah:", "Set Qty:"), fontSize = 10.sp, color = TextMutedDark)
                             listOf(1, 2, 3).forEach { packPreset ->
                                 Box(
                                     modifier = Modifier
@@ -1761,9 +1852,9 @@ private fun AddCustomerWithRouteDialog(
             ) {
                 Text(
                     text = if (selectedInitialProducts.isNotEmpty()) {
-                        "Simpan Warung + ${selectedInitialProducts.size} Produk"
+                        tr("Simpan Warung + ${selectedInitialProducts.size} Produk", "Save Store + ${selectedInitialProducts.size} Products")
                     } else {
-                        "Simpan Warung"
+                        tr("Simpan Warung", "Save Store")
                     },
                     fontWeight = FontWeight.Bold
                 )
@@ -1771,14 +1862,14 @@ private fun AddCustomerWithRouteDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal", color = TextSecondaryDark)
+                Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
             }
         }
     )
 
     if (showPhotoChooser) {
         PhotoChooserBottomSheet(
-            title = "Foto Warung",
+            title = tr("Foto Warung", "Store Photo"),
             hasExistingPhoto = photoUri != null,
             existingPhotoUri = photoUri,
             onPhotoSelected = { uri ->
@@ -1832,13 +1923,13 @@ private fun EditCustomerGpsDialog(
         title = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "Lokasi GPS • ${customer.name}",
+                    tr("Lokasi GPS • ${customer.name}", "GPS Location • ${customer.name}"),
                     fontSize = 15.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryDark
                 )
                 Text(
-                    "Multi-GPS (Fused GMaps + Satelit Offline) & Auto Alamat",
+                    tr("Multi-GPS (Fused GMaps + Satelit Offline) & Auto Alamat", "Multi-GPS (Fused GMaps + Offline Satellite) & Auto Address"),
                     fontSize = 11.sp,
                     color = SupabaseGreen
                 )
@@ -1872,7 +1963,7 @@ private fun EditCustomerGpsDialog(
                 OutlinedTextField(
                     value = addressPreview,
                     onValueChange = { addressPreview = it },
-                    label = { Text("Alamat Warung (Otomatis dari Koordinat)") },
+                    label = { Text(tr("Alamat Warung (Otomatis dari Koordinat)", "Store Address (Auto from Coordinates)")) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SupabaseGreen,
@@ -1896,12 +1987,12 @@ private fun EditCustomerGpsDialog(
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114))
             ) {
-                Text("Simpan", fontWeight = FontWeight.Bold)
+                Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal", color = TextSecondaryDark)
+                Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
             }
         }
     )
@@ -1999,7 +2090,7 @@ private fun EditCustomerAndPricesDialog(
                     ) {
                         Icon(
                             Icons.Default.DeleteOutline,
-                            contentDescription = "Hapus Warung",
+                            contentDescription = tr("Hapus Warung", "Delete Store"),
                             tint = RoseError,
                             modifier = Modifier.size(17.dp)
                         )
@@ -2016,7 +2107,7 @@ private fun EditCustomerAndPricesDialog(
                         .padding(3.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf("Info Warung", "Harga & Titip Lalu").forEachIndexed { idx, tabTitle ->
+                    listOf(tr("Info Warung", "Store Info"), tr("Harga & Titip Lalu", "Prices & Stock")).forEachIndexed { idx, tabTitle ->
                         val isSelected = activeTab == idx
                         Box(
                             modifier = Modifier
@@ -2076,7 +2167,7 @@ private fun EditCustomerAndPricesDialog(
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("Nama Warung *") },
+                            label = { Text(tr("Nama Warung *", "Store Name *")) },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SupabaseGreen,
@@ -2086,6 +2177,88 @@ private fun EditCustomerAndPricesDialog(
                             ),
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
+                    // Quick Auto-Naming Chips for existing store (3-Char Unique Code - Lat/Lng)
+                    var editUniqueCode by remember(cust.id) {
+                        val existingPrefix = cust.name.substringBefore(" - ").trim().uppercase(Locale.ROOT)
+                        val initialCode = if (existingPrefix.length == 3 && existingPrefix.all { it.isLetterOrDigit() }) {
+                            existingPrefix
+                        } else {
+                            LocationHelper.generateUniqueWarungCode(listOf(cust.name))
+                        }
+                        mutableStateOf(initialCode)
+                    }
+                    val editLatPreset = remember(editUniqueCode, latitudeStr, longitudeStr) {
+                        LocationHelper.formatWarungAutoCoordNameFromStr(editUniqueCode, latitudeStr, longitudeStr, useLongitude = false)
+                    }
+                    val editLngPreset = remember(editUniqueCode, latitudeStr, longitudeStr) {
+                        LocationHelper.formatWarungAutoCoordNameFromStr(editUniqueCode, latitudeStr, longitudeStr, useLongitude = true)
+                    }
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item {
+                            val isLatSel = name == editLatPreset
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isLatSel) SupabaseGreen else CharcoalSurfaceElevated)
+                                    .border(1.dp, if (isLatSel) SupabaseGreen else CharcoalBorder, RoundedCornerShape(6.dp))
+                                    .clickable { name = editLatPreset }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "$editLatPreset (Lat)",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isLatSel) Color(0xFF042114) else TextSecondaryDark
+                                )
+                            }
+                        }
+                        if (editLngPreset != editLatPreset) {
+                            item {
+                                val isLngSel = name == editLngPreset
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isLngSel) SupabaseGreen else CharcoalSurfaceElevated)
+                                        .border(1.dp, if (isLngSel) SupabaseGreen else CharcoalBorder, RoundedCornerShape(6.dp))
+                                        .clickable { name = editLngPreset }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "$editLngPreset (Lng)",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isLngSel) Color(0xFF042114) else TextSecondaryDark
+                                    )
+                                }
+                            }
+                        }
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(CharcoalSurfaceElevated)
+                                    .border(1.dp, SupabaseGreen.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        val nextCode = LocationHelper.generateUniqueWarungCode(listOf(cust.name, editUniqueCode))
+                                        editUniqueCode = nextCode
+                                        name = LocationHelper.formatWarungAutoCoordNameFromStr(nextCode, latitudeStr, longitudeStr, useLongitude = false)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = tr("🔄 Kode Baru ($editUniqueCode)", "🔄 New Code ($editUniqueCode)"),
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SupabaseGreen
+                                )
+                            }
+                        }
                     }
 
                     // Row 2: Hari Rute & No. Urut
@@ -2099,10 +2272,10 @@ private fun EditCustomerAndPricesDialog(
                             modifier = Modifier.weight(0.6f)
                         ) {
                             OutlinedTextField(
-                                value = selectedDay,
+                                value = trDay(selectedDay),
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("Hari Rute") },
+                                label = { Text(tr("Hari Rute", "Route Day")) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dayDropdownExpanded) },
                                 singleLine = true,
                                 modifier = Modifier
@@ -2122,7 +2295,7 @@ private fun EditCustomerAndPricesDialog(
                             ) {
                                 listOf("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu").forEach { day ->
                                     DropdownMenuItem(
-                                        text = { Text(day, color = TextPrimaryDark) },
+                                        text = { Text(trDay(day), color = TextPrimaryDark) },
                                         onClick = {
                                             selectedDay = day
                                             dayDropdownExpanded = false
@@ -2135,7 +2308,7 @@ private fun EditCustomerAndPricesDialog(
                         OutlinedTextField(
                             value = routeOrder,
                             onValueChange = { routeOrder = it.filter { ch -> ch.isDigit() } },
-                            label = { Text("Urutan") },
+                            label = { Text(tr("Urutan", "Order #")) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -2152,7 +2325,7 @@ private fun EditCustomerAndPricesDialog(
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("No. WhatsApp") },
+                        label = { Text(tr("No. WhatsApp", "WhatsApp / Phone")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -2167,7 +2340,7 @@ private fun EditCustomerAndPricesDialog(
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
-                        label = { Text("Alamat (Otomatis dari GPS / Ketik Manual)") },
+                        label = { Text(tr("Alamat (Otomatis dari GPS / Ketik Manual)", "Address (Auto from GPS / Manual)")) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SupabaseGreen,
@@ -2200,7 +2373,7 @@ private fun EditCustomerAndPricesDialog(
                 // Tab 1: Minimalist Harga Khusus & Titip Lalu per Produk (Bulk Checkbox Enabled)
                 if (allProducts.isEmpty()) {
                     Text(
-                        text = "Belum ada produk di katalog.",
+                        text = tr("Belum ada produk di katalog.", "No products in catalog yet."),
                         fontSize = 12.sp,
                         color = TextSecondaryDark
                     )
@@ -2240,7 +2413,7 @@ private fun EditCustomerAndPricesDialog(
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = if (allActive) "Kosongkan Semua" else "Centang Semua",
+                                    text = if (allActive) tr("Kosongkan Semua", "Clear All") else tr("Centang Semua", "Select All"),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (allActive) Color(0xFF042114) else SupabaseGreen
@@ -2402,7 +2575,7 @@ private fun EditCustomerAndPricesDialog(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Text(
-                                            text = "Titip Lalu: ${prod.formatPackAndPieces(currentQtyPcs)}",
+                                            text = tr("Titip Lalu: ${prod.formatPackAndPieces(currentQtyPcs)}", "Consigned: ${prod.formatPackAndPieces(currentQtyPcs)}"),
                                             fontSize = 9.5.sp,
                                             color = if (currentQtyPcs > 0) SupabaseGreen else TextMutedDark,
                                             maxLines = 1
@@ -2499,19 +2672,19 @@ private fun EditCustomerAndPricesDialog(
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SupabaseGreen, contentColor = Color(0xFF042114))
             ) {
-                Text("Simpan", fontWeight = FontWeight.Bold)
+                Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal", color = TextSecondaryDark)
+                Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
             }
         }
     )
 
     if (showPhotoChooser) {
         PhotoChooserBottomSheet(
-            title = "Foto Warung: $name",
+            title = tr("Foto Warung: $name", "Store Photo: $name"),
             hasExistingPhoto = !photoUri.isNullOrBlank(),
             existingPhotoUri = photoUri,
             onPhotoSelected = { uri ->
@@ -2536,11 +2709,11 @@ private fun EditCustomerAndPricesDialog(
             properties = DialogProperties(usePlatformDefaultWidth = false),
             containerColor = CharcoalSurface,
             title = {
-                Text("Hapus Warung?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
+                Text(tr("Hapus Warung?", "Delete Store?"), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimaryDark)
             },
             text = {
                 Text(
-                    "Hapus '${cust.name}' beserta data stok titipannya?",
+                    tr("Hapus '${cust.name}' beserta data stok titipannya?", "Delete '${cust.name}' and all its consigned stock records?"),
                     fontSize = 12.sp,
                     color = TextSecondaryDark
                 )
@@ -2553,12 +2726,12 @@ private fun EditCustomerAndPricesDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RoseError)
                 ) {
-                    Text("Hapus", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(tr("Hapus", "Delete"), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Batal", color = TextSecondaryDark)
+                    Text(tr("Batal", "Cancel"), color = TextSecondaryDark)
                 }
             }
         )
@@ -2727,7 +2900,7 @@ fun GpsSmartCoordinateSection(
                         text = if (hasValidCoords) {
                             "$latitudeStr, $longitudeStr"
                         } else {
-                            "Titik Koordinat GPS"
+                            tr("Titik Koordinat GPS", "GPS Coordinates")
                         },
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
@@ -2739,7 +2912,7 @@ fun GpsSmartCoordinateSection(
                 Spacer(modifier = Modifier.height(2.dp))
 
                 val accBadge = liveAccuracyMeters?.let { " • ±${it.toInt().coerceAtLeast(1)}m" } ?: ""
-                val modeBadge = if (isOnline) "Online ($liveProviderLabel$accBadge)" else "Offline (Satelit GPS$accBadge)"
+                val modeBadge = if (isOnline) "Online ($liveProviderLabel$accBadge)" else tr("Offline (Satelit GPS$accBadge)", "Offline (Satellite GPS$accBadge)")
                 Text(
                     text = modeBadge,
                     fontSize = 10.sp,
@@ -2762,7 +2935,7 @@ fun GpsSmartCoordinateSection(
                             val clipText = cm?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
                             if (clipText.isBlank()) {
                                 showManualInputs = true
-                                Toast.makeText(context, "Salin koordinat atau link Google Maps lalu tempel", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, tr("Salin koordinat atau link Google Maps lalu tempel", "Copy coordinates or a Google Maps link then paste"), Toast.LENGTH_SHORT).show()
                             } else {
                                 scope.launch {
                                     isDetectingGps = true
@@ -2773,10 +2946,10 @@ fun GpsSmartCoordinateSection(
                                             "%.6f".format(Locale.US, parsed.first),
                                             "%.6f".format(Locale.US, parsed.second)
                                         )
-                                        Toast.makeText(context, "Koordinat GMaps berhasil ditempel!", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, tr("Koordinat GMaps berhasil ditempel!", "GMaps coordinates pasted!"), Toast.LENGTH_SHORT).show()
                                     } else {
                                         showManualInputs = true
-                                        Toast.makeText(context, "Format clipboard bukan koordinat/link GMaps", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, tr("Format clipboard bukan koordinat/link GMaps", "Clipboard does not contain valid coordinates or GMaps link"), Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
@@ -2786,7 +2959,7 @@ fun GpsSmartCoordinateSection(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.ContentPaste,
-                            contentDescription = "Tempel GMaps",
+                            contentDescription = tr("Tempel GMaps", "Paste GMaps"),
                             tint = Color(0xFF38BDF8),
                             modifier = Modifier.size(12.dp)
                         )
@@ -2841,14 +3014,14 @@ fun GpsSmartCoordinateSection(
                         } else {
                             Icon(
                                 Icons.Default.MyLocation,
-                                contentDescription = "Ambil GPS Akurat",
+                                contentDescription = tr("Ambil GPS Akurat", "Get Accurate GPS"),
                                 tint = SupabaseGreen,
                                 modifier = Modifier.size(12.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (hasValidCoords) "Akurat" else "Ambil GPS",
+                            text = if (hasValidCoords) tr("Akurat", "Locked") else tr("Ambil GPS", "Get GPS"),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = SupabaseGreen
@@ -2869,7 +3042,7 @@ fun GpsSmartCoordinateSection(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Mengonversi koordinat ke alamat jalan...",
+                        text = tr("Mengonversi koordinat ke alamat jalan...", "Converting coordinates to street address..."),
                         fontSize = 10.sp,
                         color = TextSecondaryDark
                     )
@@ -2886,7 +3059,7 @@ fun GpsSmartCoordinateSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Alamat GPS: $addr",
+                        text = tr("Alamat GPS: $addr", "GPS Address: $addr"),
                         fontSize = 10.5.sp,
                         color = if (isDifferentFromField) TextSecondaryDark else SupabaseGreen,
                         maxLines = 2,
@@ -2895,7 +3068,7 @@ fun GpsSmartCoordinateSection(
                     if (isDifferentFromField) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Pakai",
+                            text = tr("Pakai", "Apply"),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = SupabaseGreen,
@@ -2907,7 +3080,7 @@ fun GpsSmartCoordinateSection(
                 }
             } else if (!isOnline) {
                 Text(
-                    text = "Offline Satelit • Alamat otomatis dikonversi saat koneksi internet aktif",
+                    text = tr("Offline Satelit • Alamat otomatis dikonversi saat koneksi internet aktif", "Offline Satellite • Address will auto-convert when online"),
                     fontSize = 10.sp,
                     color = AmberWarning
                 )
