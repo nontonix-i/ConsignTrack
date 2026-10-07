@@ -711,12 +711,13 @@ class AgentToolEngine(
                         }
                         val existingStock = stockDao.getStock(cust.id, prod.id)?.current_quantity ?: 0
                         val remStock = args.optInt("remaining_stock", 0).coerceAtLeast(0)
-                        val returnedQty = args.optInt("returned_quantity", 0).coerceAtLeast(0)
-                        val soldQty = (existingStock - remStock - returnedQty).coerceAtLeast(0)
-                        val addedPacks = args.optInt("added_packs", 0).coerceAtLeast(0)
+                        val returnedQty = remStock
+                        val soldQty = (existingStock - remStock).coerceAtLeast(0)
+                        val defaultPacks = if (prod.pieces_per_pack > 0) existingStock / prod.pieces_per_pack else 0
+                        val addedPacks = if (args.has("added_packs")) args.optInt("added_packs", defaultPacks).coerceAtLeast(0) else defaultPacks
                         val addedPieces = args.optInt("added_pieces", 0).coerceAtLeast(0)
                         val totalAdded = (addedPacks * prod.pieces_per_pack) + addedPieces
-                        val finalStock = remStock + totalAdded
+                        val finalStock = totalAdded
                         val totalSoldAmount = soldQty * prod.selling_price
                         val amountPaid = if (args.has("amount_paid")) args.optDouble("amount_paid", totalSoldAmount) else totalSoldAmount
                         val notes = args.optString("notes", "Dicatat via AI Agent").ifBlank { "Dicatat via AI Agent" }

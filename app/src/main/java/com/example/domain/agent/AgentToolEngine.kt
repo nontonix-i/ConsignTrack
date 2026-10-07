@@ -665,7 +665,12 @@ class AgentToolEngine(
         } else {
             (existingStock - soldQty).coerceAtLeast(0)
         }
-        val addedPacks = args.optInt("added_packs", 0).coerceAtLeast(0)
+        val defaultPacks = if (product.pieces_per_pack > 0) existingStock / product.pieces_per_pack else 0
+        val addedPacks = if (args.has("added_packs") && !args.isNull("added_packs")) {
+            args.optInt("added_packs", defaultPacks).coerceAtLeast(0)
+        } else {
+            defaultPacks
+        }
         val addedQty = addedPacks * product.pieces_per_pack
         val totalSoldAmount = soldQty * product.selling_price
         val amountPaid = if (args.has("amount_paid") && !args.isNull("amount_paid")) {
@@ -694,14 +699,14 @@ class AgentToolEngine(
                     previous_stock = existingStock,
                     remaining_stock = remStock,
                     sold_quantity = soldQty,
-                    returned_quantity = 0,
+                    returned_quantity = remStock,
                     added_quantity = addedQty,
                     unit_price = product.selling_price
                 )
             )
         )
 
-        val finalStock = remStock + addedQty
+        val finalStock = addedQty
         stockDao.insertOrUpdateStock(
             ConsignmentStock(
                 customer_id = customer.id,

@@ -284,7 +284,6 @@ fun ReconciliationScreen(
                         onPreviousStockChanged = { prevQty -> viewModel.updatePreviousStock(item.product.id, prevQty) },
                         onCustomPricePackChanged = { customPack -> viewModel.updateCustomPricePack(item.product.id, customPack) },
                         onRemainingChanged = { qty -> viewModel.updateRemainingStock(item.product.id, qty) },
-                        onAutoSwapChanged = { isAutoSwap -> viewModel.updateAutoSwapReturned(item.product.id, isAutoSwap) },
                         onAddedPacksChanged = { packs -> viewModel.updateAddedPacks(item.product.id, packs) },
                         onAddedExtraPcsChanged = { extra -> viewModel.updateAddedPiecesExtra(item.product.id, extra) },
                         onRemoveProduct = { viewModel.removeProductFromOutlet(item.product.id) }
@@ -670,7 +669,6 @@ private fun ReconciliationItemCard(
     onPreviousStockChanged: (Int) -> Unit,
     onCustomPricePackChanged: (Double?) -> Unit,
     onRemainingChanged: (Int) -> Unit,
-    onAutoSwapChanged: (Boolean) -> Unit,
     onAddedPacksChanged: (Int) -> Unit,
     onAddedExtraPcsChanged: (Int) -> Unit,
     onRemoveProduct: () -> Unit
@@ -898,34 +896,37 @@ private fun ReconciliationItemCard(
                     }
                 }
 
-                // Tukar Sisa Chip Toggle
+                // Status Auto-Tarik & Tukar Baru (Otomatis, Tanpa Perlu Klik Toggle)
                 Box(
                     modifier = Modifier
                         .background(
-                            if (item.isAutoSwapReturned) SupabaseGreen.copy(alpha = 0.15f) else CharcoalSurfaceElevated,
+                            if (item.remainingStock > 0) Color(0xFF38BDF8).copy(alpha = 0.14f) else SupabaseGreen.copy(alpha = 0.12f),
                             RoundedCornerShape(6.dp)
                         )
                         .border(
                             1.dp,
-                            if (item.isAutoSwapReturned) SupabaseGreen else CharcoalBorder,
+                            if (item.remainingStock > 0) Color(0xFF38BDF8).copy(alpha = 0.45f) else SupabaseGreen.copy(alpha = 0.35f),
                             RoundedCornerShape(6.dp)
                         )
-                        .clickable { onAutoSwapChanged(!item.isAutoSwapReturned) }
                         .padding(horizontal = 7.dp, vertical = 5.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.Autorenew,
                             contentDescription = null,
-                            tint = if (item.isAutoSwapReturned) SupabaseGreen else TextMutedDark,
+                            tint = if (item.remainingStock > 0) Color(0xFF38BDF8) else SupabaseGreen,
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = tr("Tukar", "Swap"),
+                            text = if (item.remainingStock > 0) {
+                                tr("Tarik ${item.remainingStock}", "Pull ${item.remainingStock}")
+                            } else {
+                                tr("Tukar Baru", "Auto Swap")
+                            },
                             fontSize = 10.5.sp,
-                            fontWeight = if (item.isAutoSwapReturned) FontWeight.Bold else FontWeight.Normal,
-                            color = if (item.isAutoSwapReturned) SupabaseGreen else TextSecondaryDark
+                            fontWeight = FontWeight.Bold,
+                            color = if (item.remainingStock > 0) Color(0xFF38BDF8) else SupabaseGreen
                         )
                     }
                 }
@@ -1235,8 +1236,8 @@ private fun SettlementCard(
                     )
                     Text(
                         text = tr(
-                            "Laku $totalSoldQty pcs • Titip +$totalAddedPacks pack" + (if (totalReturned > 0) " • Retur $totalReturned" else ""),
-                            "Sold $totalSoldQty pcs • Added +$totalAddedPacks pack" + (if (totalReturned > 0) " • Returned $totalReturned" else "")
+                            "Laku $totalSoldQty pcs • Titip Baru +$totalAddedPacks pack" + (if (totalReturned > 0) " • Sisa Ditarik $totalReturned pcs" else ""),
+                            "Sold $totalSoldQty pcs • New Drop +$totalAddedPacks pack" + (if (totalReturned > 0) " • Pulled $totalReturned pcs" else "")
                         ),
                         fontSize = 10.5.sp,
                         color = TextMutedDark

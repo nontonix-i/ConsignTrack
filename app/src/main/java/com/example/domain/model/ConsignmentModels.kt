@@ -79,16 +79,16 @@ data class ReconciliationItem(
     val hasCustomPrice: Boolean
         get() = isCustomPrice
 
-    // Sisa yang ditarik dari warung
+    // Semua sisa di warung selalu otomatis ditarik & ditukar stok baru (tanpa dihitung sebagai kerugian)
     val returnedQuantity: Int
-        get() = if (isAutoSwapReturned) remainingStock else manualReturnedQuantity
+        get() = remainingStock
 
-    // Sisa stok lama yang dibiarkan di warung (0 jika ditarik semua)
+    // Tidak ada sisa lama yang ditinggal di warung karena selalu ditarik & ditukar baru
     val remainingLeftAtStore: Int
-        get() = if (isAutoSwapReturned) 0 else maxOf(0, remainingStock - manualReturnedQuantity)
+        get() = 0
 
-    // Yang terjual / laku: Stok Lalu - Sisa yang ada
-    // Contoh: Stok lalu 30 pcs, sisa 7 pcs -> laku = 23 pcs!
+    // Yang terjual / laku: Stok Lalu - Sisa yang ditarik
+    // Contoh: Stok lalu 30 pcs, sisa 7 pcs (ditarik) -> laku = 23 pcs!
     val soldQuantity: Int
         get() = maxOf(0, previousStock - remainingStock)
 
@@ -96,7 +96,7 @@ data class ReconciliationItem(
     val subtotal: Double
         get() = soldQuantity * effectivePriceUnit
 
-    // HPP / Biaya pokok barang yang laku
+    // HPP / Biaya pokok HANYA dari barang yang laku (sisa ditarik & ditukar baru, TIDAK masuk kerugian)
     val costTotal: Double
         get() = soldQuantity * product.cost_price
 
@@ -104,11 +104,9 @@ data class ReconciliationItem(
     val addedQuantity: Int
         get() = (addedPacks * product.pieces_per_pack) + addedPiecesExtra
 
-    // Stok akhir yang ada di warung setelah kunjungan
-    // Jika ditarik: 0 + addedQuantity
-    // Jika ditinggal: sisa + addedQuantity
+    // Stok akhir yang ada di warung setelah kunjungan = murni dari Titip Baru (karena sisa lama selalu ditarik)
     val finalStock: Int
-        get() = remainingLeftAtStore + addedQuantity
+        get() = addedQuantity
 }
 
 data class TransactionWithDetails(
