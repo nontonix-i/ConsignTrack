@@ -648,6 +648,16 @@ fun GraphicsAnalysisScreen(
                     }
                 }
 
+                // 2.5. Kerupuk Business Strategy Recapitulation Card (60 Packs/Route, Monthly Financials & Net Savings Allocation)
+                item {
+                    KerupukBusinessStrategyRecapCard(
+                        actualRevenue = filteredSalesRevenue,
+                        actualGrossProfit = filteredSalesRevenue - filteredHpp,
+                        actualOpEx = filteredOpEx,
+                        animProgress = animProgress
+                    )
+                }
+
                 // 3. Interactive Daily Performance Bar Chart (by Date in Selected Month)
                 item {
                     DailyPerformanceBarChartCard(

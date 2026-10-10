@@ -134,6 +134,12 @@ fun ProductCatalogScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                item {
+                    KerupukRoutePresetBanner(
+                        onLoadPreset = { viewModel.seedKerupukBlueprintProducts() }
+                    )
+                }
+
                 items(uiState.products, key = { it.product.id }) { item ->
                     ProductCard(
                         item = item,
@@ -168,6 +174,76 @@ fun ProductCatalogScreen(
     }
 }
 
+private fun getRecommendedRouteQuota(productName: String): Int? {
+    val lower = productName.lowercase()
+    return when {
+        lower.contains("sb pedas") || lower == "sb" -> 15
+        lower.contains("kp original") || lower == "kp" -> 15
+        lower.contains("st original") || lower == "st" -> 5
+        lower.contains("dd rambak") || lower.contains("rambak") -> 5
+        lower.startsWith("ao") -> 8
+        lower.startsWith("jk") -> 6
+        lower.startsWith("bo") -> 4
+        lower.startsWith("mk") -> 2
+        else -> null
+    }
+}
+
+@Composable
+private fun KerupukRoutePresetBanner(
+    onLoadPreset: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, SupabaseGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = CharcoalSurface),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = tr("Paket 8 Varian Kerupuk (60 Bks/Rute)", "8 Kerupuk Variants Preset (60 Packs/Route)"),
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SupabaseGreen
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = tr(
+                            "SB(15) • KP(15) • AO(8) • JK(6) • ST(5) • DD(5) • BO(4) • MK(2) | Modal Rp 11rb → Jual Rp 16rb (Laba Rp 5rb)",
+                            "SB(15) • KP(15) • AO(8) • JK(6) • ST(5) • DD(5) • BO(4) • MK(2) | Cost Rp 11k → Sell Rp 16k (Profit Rp 5k)"
+                        ),
+                        fontSize = 10.5.sp,
+                        color = TextSecondaryDark
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onLoadPreset,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SupabaseGreen,
+                        contentColor = Color(0xFF042114)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = tr("⚡ Muat 8 Varian", "⚡ Load 8 Variants"),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ProductCard(
     item: ProductWithStock,
@@ -175,6 +251,7 @@ private fun ProductCard(
     onDelete: () -> Unit
 ) {
     val p = item.product
+    val routeQuota = getRecommendedRouteQuota(p.name)
 
     Card(
         modifier = Modifier
@@ -191,12 +268,32 @@ private fun ProductCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = p.name,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryDark
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = p.name,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryDark
+                        )
+                        if (routeQuota != null) {
+                            Box(
+                                modifier = Modifier
+                                    .background(SupabaseGreen.copy(alpha = 0.15f), RoundedCornerShape(5.dp))
+                                    .border(1.dp, SupabaseGreen.copy(alpha = 0.4f), RoundedCornerShape(5.dp))
+                                    .padding(horizontal = 6.dp, vertical = 1.5.dp)
+                            ) {
+                                Text(
+                                    text = tr("Jatah Rute: $routeQuota bks", "Route Quota: $routeQuota pks"),
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SupabaseGreen
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = tr(
                             "1 ${p.unit_big} = ${p.pieces_per_pack} ${p.unit_small} • Stok Aktif: ${p.formatPackAndPieces(item.totalConsignedStock)}",
@@ -256,15 +353,15 @@ private fun ProductMultiUnitDialog(
     onConfirm: (name: String, unitSmall: String, unitBig: String, piecesPerPack: Int, sellingPricePack: Double, costPricePack: Double) -> Unit
 ) {
     var name by remember { mutableStateOf(product?.name ?: "") }
-    var unitBig by remember { mutableStateOf(product?.unit_big ?: "Pack") }
-    var unitSmall by remember { mutableStateOf(product?.unit_small ?: "Pcs") }
-    var piecesPerPackStr by remember { mutableStateOf(product?.pieces_per_pack?.toString() ?: "10") }
+    var unitBig by remember { mutableStateOf(product?.unit_big ?: "Bks") }
+    var unitSmall by remember { mutableStateOf(product?.unit_small ?: "Bks") }
+    var piecesPerPackStr by remember { mutableStateOf(product?.pieces_per_pack?.toString() ?: "1") }
     var sellingPricePackStr by remember { mutableStateOf(product?.selling_price_pack?.let { "%.0f".format(it) } ?: "16000") }
-    var costPricePackStr by remember { mutableStateOf(product?.cost_price_pack?.let { "%.0f".format(it) } ?: "11500") }
+    var costPricePackStr by remember { mutableStateOf(product?.cost_price_pack?.let { "%.0f".format(it) } ?: "11000") }
 
-    val pieces = piecesPerPackStr.toIntOrNull() ?: 10
+    val pieces = piecesPerPackStr.toIntOrNull() ?: 1
     val sellPack = sellingPricePackStr.toDoubleOrNull() ?: 16000.0
-    val costPack = costPricePackStr.toDoubleOrNull() ?: 11500.0
+    val costPack = costPricePackStr.toDoubleOrNull() ?: 11000.0
     val sellPcs = if (pieces > 0) sellPack / pieces else 0.0
     val costPcs = if (pieces > 0) costPack / pieces else 0.0
     val profitPack = sellPack - costPack

@@ -83,6 +83,7 @@ import com.example.ui.theme.tr
 import com.example.ui.viewmodel.FinanceTab
 import com.example.ui.viewmodel.FinancialViewModel
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -180,44 +181,75 @@ fun FinancialScreen(
 
                     // Action Buttons for Business
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    dialogIsExpense = true
-                                    showAddDialog = true
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = CharcoalSurfaceElevated,
-                                    contentColor = RoseError
-                                ),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(tr("Pengeluaran", "Expense"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Button(
+                                    onClick = {
+                                        dialogIsExpense = true
+                                        showAddDialog = true
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = CharcoalSurfaceElevated,
+                                        contentColor = RoseError
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                                ) {
+                                    Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(15.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(tr("Pengeluaran", "Expense"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+
+                                Button(
+                                    onClick = {
+                                        dialogIsExpense = false
+                                        showAddDialog = true
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = CharcoalSurfaceElevated,
+                                        contentColor = SupabaseGreen
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                                ) {
+                                    Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(15.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(tr("Pemasukan", "Income"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
                             }
 
-                            Button(
-                                onClick = {
-                                    dialogIsExpense = false
-                                    showAddDialog = true
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = CharcoalSurfaceElevated,
-                                    contentColor = SupabaseGreen
-                                ),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                            // 1-Tap Quick Operational Motor Expense Presets (Rute ~25 km)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(tr("Pemasukan", "Income"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.addBusinessExpense(15000.0, tr("Bensin Motor Rute (~25 km)", "Route Motor Fuel (~25 km)"))
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                                ) {
+                                    Text(tr("⛽ +Bensin 15rb", "⛽ +Fuel 15k"), fontSize = 10.5.sp, color = AmberWarning)
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.addBusinessExpense(50000.0, tr("Cadangan Servis / Oli Motor", "Motor Service / Oil Reserve"))
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                                ) {
+                                    Text(tr("🔧 +Servis 50rb", "🔧 +Service 50k"), fontSize = 10.5.sp, color = BlueInfo)
+                                }
                             }
                         }
                     }
@@ -248,6 +280,19 @@ fun FinancialScreen(
                     // Kas Pribadi Section (Completely Isolated from Business)
                     item {
                         PersonalBalanceCard(summary = uiState.personalSummary)
+                    }
+
+                    // Daily Living Limit Tracker (Makan Maks Rp 30.000/hr & Rokok Maks Rp 20.000/hr)
+                    item {
+                        DailyPersonalBudgetCard(
+                            records = uiState.personalRecords,
+                            onQuickAddMeal = { amt ->
+                                viewModel.addPersonalExpense(amt, tr("Makan Harian", "Daily Meal"))
+                            },
+                            onQuickAddCigarette = { amt ->
+                                viewModel.addPersonalExpense(amt, tr("Rokok Harian", "Daily Cigarettes"))
+                            }
+                        )
                     }
 
                     // Action Buttons for Personal
@@ -412,6 +457,119 @@ private fun BusinessPnLCard(summary: BusinessFinancialSummary) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = CharcoalBorder)
             FinanceRow(label = tr("Laba Kotor", "Gross Profit"), value = "Rp %,.0f".format(summary.grossProfit), isBold = true)
             FinanceRow(label = tr("Operasional", "Operational Expenses"), value = "- Rp %,.0f".format(summary.operationalExpenses), valueColor = RoseError)
+        }
+    }
+}
+
+@Composable
+private fun DailyPersonalBudgetCard(
+    records: List<FinancialRecord>,
+    onQuickAddMeal: (Double) -> Unit,
+    onQuickAddCigarette: (Double) -> Unit
+) {
+    val startOfToday = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+
+    val todayExpenses = remember(records, startOfToday) {
+        records.filter {
+            it.category == FinancialCategory.PERSONAL_EXPENSE && it.transaction_date >= startOfToday
+        }
+    }
+
+    val todayMealSpent = remember(todayExpenses) {
+        todayExpenses.filter {
+            val d = it.description.lowercase()
+            d.contains("makan") || d.contains("meal") || d.contains("nasi") || d.contains("minum")
+        }.sumOf { it.amount }
+    }
+
+    val todayCigSpent = remember(todayExpenses) {
+        todayExpenses.filter {
+            val d = it.description.lowercase()
+            d.contains("rokok") || d.contains("cig")
+        }.sumOf { it.amount }
+    }
+
+    val mealCap = 30_000.0
+    val cigCap = 20_000.0
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, CharcoalBorder, RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = CharcoalSurface),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = tr(
+                    "Kontrol Batas Harian (Makan Rp 30rb • Rokok Rp 20rb)",
+                    "Daily Spending Cap (Meal Rp 30k • Cigarette Rp 20k)"
+                ),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = SupabaseGreen
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = tr("🍛 Makan Hari Ini: Rp %,.0f / 30.000", "🍛 Today's Meal: Rp %,.0f / 30,000").format(todayMealSpent),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (todayMealSpent > mealCap) RoseError else TextPrimaryDark
+                )
+                Text(
+                    text = tr("🚬 Rokok Hari Ini: Rp %,.0f / 20.000", "🚬 Today's Cig: Rp %,.0f / 20,000").format(todayCigSpent),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (todayCigSpent > cigCap) RoseError else TextPrimaryDark
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { onQuickAddMeal(15_000.0) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                ) {
+                    Text(tr("+Makan 15rb", "+Meal 15k"), fontSize = 10.sp, color = SupabaseGreen)
+                }
+                OutlinedButton(
+                    onClick = { onQuickAddMeal(30_000.0) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                ) {
+                    Text(tr("+Makan 30rb", "+Meal 30k"), fontSize = 10.sp, color = AmberWarning)
+                }
+                OutlinedButton(
+                    onClick = { onQuickAddCigarette(20_000.0) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CharcoalBorder)
+                ) {
+                    Text(tr("+Rokok 20rb", "+Cig 20k"), fontSize = 10.sp, color = RoseError)
+                }
+            }
         }
     }
 }

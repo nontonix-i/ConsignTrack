@@ -1757,3 +1757,414 @@ fun DailyPerformanceBarChartCard(
     }
 }
 
+private data class KerupukVariantQuota(
+    val code: String,
+    val name: String,
+    val packsPerRoute: Int,
+    val color: Color
+)
+
+/**
+ * Grafik Rekapitulasi Strategi Usaha Kerupuk (60 Bks/Rute • 360 Bks/Mgg • 24 Rute/Bln):
+ * 1. Komposisi 8 Varian per Rute (Total 60 Bks untuk 20-27 Warung, 3 Varian/Warung)
+ * 2. Target & Struktur Keuangan Bulanan (Omzet Rp 23.040.000, Modal Rp 15.840.000, Laba Dagang Rp 7.200.000)
+ * 3. Alokasi Dana Bersih Bulanan (Tabungan Bersih Rp 5.170.000 [71.8%], Makan Maks Rp 30rb/hr, Rokok Maks Rp 20rb/hr, Bensin & Servis Motor Rute 25 km)
+ */
+@Composable
+fun KerupukBusinessStrategyRecapCard(
+    actualRevenue: Double,
+    actualGrossProfit: Double,
+    actualOpEx: Double,
+    animProgress: Float
+) {
+    val variants = remember {
+        listOf(
+            KerupukVariantQuota("SB", "SB Pedas", 15, Color(0xFF3ECF8E)),
+            KerupukVariantQuota("KP", "KP Original", 15, Color(0xFF38BDF8)),
+            KerupukVariantQuota("AO", "AO (Combine)", 8, Color(0xFFF59E0B)),
+            KerupukVariantQuota("JK", "JK (Combine)", 6, Color(0xFFA855F7)),
+            KerupukVariantQuota("ST", "ST Original", 5, Color(0xFF14B8A6)),
+            KerupukVariantQuota("DD", "DD Rambak Tdk Pedas", 5, Color(0xFFEC4899)),
+            KerupukVariantQuota("BO", "BO (Combine)", 4, Color(0xFF6366F1)),
+            KerupukVariantQuota("MK", "MK (Combine)", 2, Color(0xFFF43F5E))
+        )
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, SupabaseGreen.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
+        colors = CardDefaults.cardColors(containerColor = CharcoalSurface),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = tr(
+                            "Rekapitulasi Strategi Usaha Kerupuk",
+                            "Kerupuk Business Strategy Recap"
+                        ),
+                        fontSize = 14.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryDark
+                    )
+                    Text(
+                        text = tr(
+                            "60 Bks/Rute (20–27 Warung) • 6 Rute/Mgg (360 Bks) • 24 Rute/Bln (1.440 Bks)",
+                            "60 Pks/Route (20–27 Stores) • 6 Routes/Wk (360 Pks) • 24 Routes/Mo (1,440 Pks)"
+                        ),
+                        fontSize = 10.5.sp,
+                        color = SupabaseGreen
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // SECTION 1: Komposisi 60 Bungkus per Rute (Stacked Bar + Breakdown)
+            Text(
+                text = tr(
+                    "1. Komposisi Varian per Rute (Total 60 Bks • 3 Varian/Warung)",
+                    "1. Variant Composition per Route (Total 60 Pks • 3 Variants/Store)"
+                ),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimaryDark
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Multi-segment horizontal stacked bar for 60 packs
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CharcoalSurfaceElevated)
+            ) {
+                variants.forEach { v ->
+                    val weightFrac = (v.packsPerRoute / 60f) * animProgress.coerceAtLeast(0.05f)
+                    Box(
+                        modifier = Modifier
+                            .weight(weightFrac.coerceAtLeast(0.01f))
+                            .fillMaxHeight()
+                            .background(v.color)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 2-column grid of the 8 variants
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                variants.chunked(2).forEach { pair ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        pair.forEach { v ->
+                            val pct = (v.packsPerRoute / 60.0) * 100.0
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(CharcoalSurfaceElevated, RoundedCornerShape(7.dp))
+                                    .border(1.dp, CharcoalBorder, RoundedCornerShape(7.dp))
+                                    .padding(horizontal = 8.dp, vertical = 5.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(v.color, CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = v.name,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimaryDark,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Text(
+                                    text = "${v.packsPerRoute} (${"%.0f".format(pct)}%)",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = v.color
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = CharcoalBorder)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // SECTION 2: Grafik Keuangan Bulanan (Modal Rp 11.000 -> Jual Rp 16.000 -> Laba Rp 5.000/bks)
+            Text(
+                text = tr(
+                    "2. Perhitungan Keuangan Bulanan (Modal Rp 11rb • Jual Rp 16rb • Untung Rp 5rb/Bks)",
+                    "2. Monthly Financials (Cost Rp 11k • Sell Rp 16k • Profit Rp 5k/Pk)"
+                ),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimaryDark
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val monthlyTargetOmzet = 23_040_000.0
+            val monthlyTargetCost = 15_840_000.0
+            val monthlyTargetGrossProfit = 7_200_000.0
+
+            StrategyBarRow(
+                label = tr("Omzet Kotor Bulanan (1.440 bks × Rp 16rb)", "Monthly Gross Revenue (1,440 × Rp 16k)"),
+                valueText = "Rp 23.040.000",
+                subText = if (actualRevenue > 0) tr("Aktual tercatat: Rp %,.0f", "Recorded actual: Rp %,.0f").format(actualRevenue) else tr("Rp 960.000 / rute × 24 rute", "Rp 960,000 / route × 24 routes"),
+                fraction = 1f * animProgress,
+                color = SupabaseGreen
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            StrategyBarRow(
+                label = tr("Modal Produksi / Kulakan (1.440 bks × Rp 11rb)", "Monthly Production / COGS (1,440 × Rp 11k)"),
+                valueText = "Rp 15.840.000",
+                subText = tr("68,75% dari Omzet (Rp 660.000 / rute)", "68.75% of Revenue (Rp 660,000 / route)"),
+                fraction = (monthlyTargetCost / monthlyTargetOmzet).toFloat() * animProgress,
+                color = AmberWarning
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            StrategyBarRow(
+                label = tr("Keuntungan Bersih Dagang (1.440 bks × Rp 5rb)", "Monthly Trading Profit (1,440 × Rp 5k)"),
+                valueText = "Rp 7.200.000",
+                subText = if (actualGrossProfit > 0) tr("Laba kotor tercatat: Rp %,.0f", "Recorded gross profit: Rp %,.0f").format(actualGrossProfit) else tr("31,25% Margin (Rp 300.000 / rute)", "31.25% Margin (Rp 300,000 / route)"),
+                fraction = (monthlyTargetGrossProfit / monthlyTargetOmzet).toFloat() * animProgress,
+                color = BlueInfo
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = CharcoalBorder)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // SECTION 3: Persentase Alokasi Dana Bersih (Rp 7.200.000 -> Sisa Bersih Ditabung Rp 5.170.000)
+            Text(
+                text = tr(
+                    "3. Alokasi Laba Dagang (Rp 7,2 Jt) & Sisa Bersih Ditabung",
+                    "3. Profit Allocation (Rp 7.2M) & Net Savings"
+                ),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimaryDark
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Stacked Bar of Profit Allocation (7.2M = 5.17M Savings + 900k Meals + 600k Cigarettes + 530k Motor/Fuel 25km)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(CharcoalSurfaceElevated)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(0.718f)
+                        .fillMaxHeight()
+                        .background(SupabaseGreen)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(0.125f)
+                        .fillMaxHeight()
+                        .background(AmberWarning)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(0.083f)
+                        .fillMaxHeight()
+                        .background(RoseError)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(0.074f)
+                        .fillMaxHeight()
+                        .background(BlueInfo)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AllocationRowItem(
+                dotColor = SupabaseGreen,
+                title = tr("Sisa Bersih Murni (Aman Ditabung)", "Pure Net Savings (Safe to Save)"),
+                subtitle = tr("Setelah potong operasional motor & biaya hidup", "After motor ops & daily living expenses"),
+                amount = "Rp 5.170.000",
+                pct = "71,8%",
+                highlight = true
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            AllocationRowItem(
+                dotColor = AmberWarning,
+                title = tr("Batas Makan Harian (Maks Rp 30.000/hari)", "Daily Meal Cap (Max Rp 30,000/day)"),
+                subtitle = tr("Estimasi 30 hari × Rp 30.000", "Est. 30 days × Rp 30,000"),
+                amount = "Rp 900.000",
+                pct = "12,5%",
+                highlight = false
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            AllocationRowItem(
+                dotColor = RoseError,
+                title = tr("Batas Rokok Harian (Maks Rp 20.000/hari)", "Daily Cigarette Cap (Max Rp 20,000/day)"),
+                subtitle = tr("Estimasi 30 hari × Rp 20.000", "Est. 30 days × Rp 20,000"),
+                amount = "Rp 600.000",
+                pct = "8,3%",
+                highlight = false
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            AllocationRowItem(
+                dotColor = BlueInfo,
+                title = tr("Operasional Motor Rute ~25 km (Bensin & Servis)", "Motor Ops ~25 km Route (Fuel & Service)"),
+                subtitle = if (actualOpEx > 0) tr("Operasional tercatat: Rp %,.0f", "Recorded ops: Rp %,.0f").format(actualOpEx) else tr("Bensin 24 rute + cadangan servis/oli bulanan", "24 routes fuel + monthly service reserve"),
+                amount = "Rp 530.000",
+                pct = "7,4%",
+                highlight = false
+            )
+        }
+    }
+}
+
+@Composable
+private fun StrategyBarRow(
+    label: String,
+    valueText: String,
+    subText: String,
+    fraction: Float,
+    color: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CharcoalSurfaceElevated, RoundedCornerShape(8.dp))
+            .padding(horizontal = 10.dp, vertical = 7.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                fontSize = 10.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimaryDark,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = valueText,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(CharcoalBg)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction.coerceIn(0.04f, 1f))
+                    .fillMaxHeight()
+                    .background(color, RoundedCornerShape(3.dp))
+            )
+        }
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = subText,
+            fontSize = 9.5.sp,
+            color = TextMutedDark
+        )
+    }
+}
+
+@Composable
+private fun AllocationRowItem(
+    dotColor: Color,
+    title: String,
+    subtitle: String,
+    amount: String,
+    pct: String,
+    highlight: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (highlight) SupabaseGreen.copy(alpha = 0.12f) else CharcoalSurfaceElevated,
+                RoundedCornerShape(8.dp)
+            )
+            .border(
+                1.dp,
+                if (highlight) SupabaseGreen.copy(alpha = 0.4f) else CharcoalBorder,
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .background(dotColor, CircleShape)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (highlight) SupabaseGreen else TextPrimaryDark
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 9.5.sp,
+                    color = TextSecondaryDark
+                )
+            }
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = amount,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (highlight) SupabaseGreen else TextPrimaryDark
+            )
+            Text(
+                text = pct,
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = dotColor
+            )
+        }
+    }
+}
+
+

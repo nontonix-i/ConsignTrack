@@ -56,11 +56,11 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
     fun saveProduct(
         id: Long,
         name: String,
-        unitSmall: String = "Pcs",
-        unitBig: String = "Pack",
-        piecesPerPack: Int = 10,
+        unitSmall: String = "Bks",
+        unitBig: String = "Bks",
+        piecesPerPack: Int = 1,
         sellingPricePack: Double = 16000.0,
-        costPricePack: Double = 11500.0
+        costPricePack: Double = 11000.0
     ) {
         val safePieces = if (piecesPerPack <= 0) 1 else piecesPerPack
         val pricePerPcs = sellingPricePack / safePieces
@@ -81,6 +81,44 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
                     cost_price = costPerPcs
                 )
             )
+        }
+    }
+
+    /**
+     * Memuat 8 varian kerupuk sesuai komposisi 60 bungkus per rute (Modal Rp 11.000, Jual Rp 16.000, Laba Rp 5.000/bks):
+     * SB Pedas (15), KP Original (15), ST Original (5), DD Rambak Tidak Pedas (5),
+     * AO Combine (8), JK Combine (6), BO Combine (4), MK Combine (2).
+     */
+    fun seedKerupukBlueprintProducts() {
+        val blueprintVariants = listOf(
+            "SB Pedas",
+            "KP Original",
+            "ST Original",
+            "DD Rambak Tidak Pedas",
+            "AO (Combine)",
+            "JK (Combine)",
+            "BO (Combine)",
+            "MK (Combine)"
+        )
+        viewModelScope.launch {
+            val existingByName = uiState.value.products.associateBy { it.product.name.lowercase() }
+            blueprintVariants.forEach { variantName ->
+                val existing = existingByName[variantName.lowercase()]?.product
+                repository.saveProduct(
+                    Product(
+                        id = existing?.id ?: 0L,
+                        name = variantName,
+                        unit = "Bks",
+                        unit_small = "Bks",
+                        unit_big = "Bks",
+                        pieces_per_pack = 1,
+                        selling_price_pack = 16000.0,
+                        cost_price_pack = 11000.0,
+                        selling_price = 16000.0,
+                        cost_price = 11000.0
+                    )
+                )
+            }
         }
     }
 
